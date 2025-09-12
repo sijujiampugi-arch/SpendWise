@@ -533,7 +533,32 @@ const AddExpense = ({ categories, onExpenseAdded, user }) => {
         shared_data: formData.is_shared ? sharedData : null
       };
 
-      await axios.post(`${API}/expenses`, requestData, { withCredentials: true });
+      console.log('Submitting expense data:', requestData);
+      
+      // Validate shared expense data if needed
+      if (formData.is_shared) {
+        const totalPercentage = sharedData.splits.reduce((sum, split) => sum + (split.percentage || 0), 0);
+        if (Math.abs(totalPercentage - 100) > 0.01) {
+          alert(`Split percentages must total 100%. Current total: ${totalPercentage}%`);
+          return;
+        }
+        
+        // Check for valid emails
+        for (const split of sharedData.splits) {
+          if (!split.email || !split.email.includes('@')) {
+            alert('Please enter valid email addresses for all participants');
+            return;
+          }
+        }
+        
+        if (!sharedData.paid_by_email || !sharedData.paid_by_email.includes('@')) {
+          alert('Please enter a valid email for who paid initially');
+          return;
+        }
+      }
+
+      const response = await axios.post(`${API}/expenses`, requestData, { withCredentials: true });
+      console.log('Expense created successfully:', response.data);
       
       // Reset form
       setFormData({
@@ -553,7 +578,8 @@ const AddExpense = ({ categories, onExpenseAdded, user }) => {
       alert('Expense added successfully!');
     } catch (error) {
       console.error('Error adding expense:', error);
-      alert(error.response?.data?.detail || 'Error adding expense');
+      console.error('Error response:', error.response?.data);
+      alert(error.response?.data?.detail || 'Error adding expense. Please check the console for details.');
     }
   };
 

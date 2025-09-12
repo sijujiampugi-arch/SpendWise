@@ -147,6 +147,19 @@ class Settlement(BaseModel):
     settled: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# Import Models
+class ImportPreview(BaseModel):
+    total_rows: int
+    preview_data: List[Dict[str, Any]]
+    detected_columns: Dict[str, str]
+    import_stats: Dict[str, int]
+
+class ImportResult(BaseModel):
+    total_imported: int
+    successful: int
+    failed: int
+    errors: List[str]
+
 # Helper functions
 def prepare_for_mongo(data):
     """Convert date objects to ISO strings for MongoDB storage"""

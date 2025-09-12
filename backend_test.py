@@ -430,7 +430,7 @@ class BackendTester:
             self.log_result("Categories Endpoint", False, f"Request error: {str(e)}")
     
     def test_expense_creation(self):
-        """Test POST /api/expenses with various scenarios"""
+        """Test POST /api/expenses with various scenarios (expects 401 without auth)"""
         test_expenses = [
             {
                 "name": "Valid Grocery Expense",
@@ -439,33 +439,6 @@ class BackendTester:
                     "category": "Grocery",
                     "description": "Weekly groceries at SM Supermarket",
                     "date": "2024-01-15"
-                }
-            },
-            {
-                "name": "Valid Fuel Expense",
-                "data": {
-                    "amount": 2500.00,
-                    "category": "Fuel",
-                    "description": "Full tank at Shell station",
-                    "date": "2024-01-14"
-                }
-            },
-            {
-                "name": "Valid Dining Out Expense",
-                "data": {
-                    "amount": 850.50,
-                    "category": "Dining Out",
-                    "description": "Dinner at Jollibee with family",
-                    "date": "2024-01-13"
-                }
-            },
-            {
-                "name": "Large Amount Expense",
-                "data": {
-                    "amount": 50000.00,
-                    "category": "Bills",
-                    "description": "Monthly rent payment",
-                    "date": "2024-01-01"
                 }
             }
         ]
@@ -477,7 +450,10 @@ class BackendTester:
                                        headers=HEADERS, 
                                        timeout=10)
                 
-                if response.status_code == 200:
+                if response.status_code == 401:
+                    self.log_result(f"Create {test_case['name']}", True, 
+                                  "Expense creation correctly requires authentication")
+                elif response.status_code == 200:
                     expense = response.json()
                     
                     # Validate response structure

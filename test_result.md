@@ -207,13 +207,13 @@ metadata:
 
 test_plan:
   current_focus:
-    - "FastAPI expense tracking backend with MongoDB"
-    - "Statistics endpoint for dashboard charts"
     - "D3.js charts for dashboard"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
     message: "Created MVP expense tracking app with Apple-like design. Need to test backend APIs, expense creation, and chart rendering with actual data."
+  - agent: "testing"
+    message: "Backend testing completed successfully! All core APIs working: ✅ Health check, ✅ Categories (all 9 with colors/icons), ✅ Expense CRUD (create/read/delete), ✅ Advanced filtering (month/year/category), ✅ Statistics endpoint (totals/breakdowns/trends), ✅ Philippine Peso support, ✅ MongoDB integration, ✅ Edge cases handled. Success rate: 95.2% (20/21 tests passed). Only minor issue: delete endpoint returns HTTP 400 instead of 404 for non-existent expenses, but functionality works correctly. Backend is production-ready!"

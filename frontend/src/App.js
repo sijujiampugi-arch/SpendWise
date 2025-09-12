@@ -527,9 +527,22 @@ const AddExpense = ({ categories, onExpenseAdded, user }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     try {
+      // Basic form validation
+      if (!formData.amount || parseFloat(formData.amount) <= 0) {
+        alert('Please enter a valid amount greater than 0');
+        return;
+      }
+
+      if (!formData.description.trim()) {
+        alert('Please enter a description');
+        return;
+      }
+
       const requestData = {
         ...formData,
+        amount: parseFloat(formData.amount), // Ensure it's a number
         shared_data: formData.is_shared ? sharedData : null
       };
 
@@ -537,27 +550,47 @@ const AddExpense = ({ categories, onExpenseAdded, user }) => {
       
       // Validate shared expense data if needed
       if (formData.is_shared) {
-        const totalPercentage = sharedData.splits.reduce((sum, split) => sum + (split.percentage || 0), 0);
-        if (Math.abs(totalPercentage - 100) > 0.01) {
-          alert(`Split percentages must total 100%. Current total: ${totalPercentage}%`);
-          return;
-        }
-        
-        // Check for valid emails
-        for (const split of sharedData.splits) {
-          if (!split.email || !split.email.includes('@')) {
-            alert('Please enter valid email addresses for all participants');
-            return;
-          }
-        }
-        
+        // Check for valid paid_by_email
         if (!sharedData.paid_by_email || !sharedData.paid_by_email.includes('@')) {
           alert('Please enter a valid email for who paid initially');
           return;
         }
+
+        // Check splits
+        if (!sharedData.splits || sharedData.splits.length === 0) {
+          alert('Please add at least one person to split with');
+          return;
+        }
+
+        // Validate each split
+        for (let i = 0; i < sharedData.splits.length; i++) {
+          const split = sharedData.splits[i];
+          if (!split.email || !split.email.includes('@')) {
+            alert(`Please enter a valid email for person ${i + 1}`);
+            return;
+          }
+          if (!split.percentage || split.percentage <= 0) {
+            alert(`Please enter a valid percentage for ${split.email}`);
+            return;
+          }
+        }
+
+        // Check total percentage (with some tolerance)
+        const totalPercentage = sharedData.splits.reduce((sum, split) => sum + (parseFloat(split.percentage) || 0), 0);
+        if (Math.abs(totalPercentage - 100) > 1) { // Allow 1% tolerance
+          alert(`Split percentages should total 100%. Current total: ${totalPercentage.toFixed(1)}%`);
+          return;
+        }
       }
 
-      const response = await axios.post(`${API}/expenses`, requestData, { withCredentials: true });
+      console.log('Validation passed, sending request...');
+      const response = await axios.post(`${API}/expenses`, requestData, { 
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
       console.log('Expense created successfully:', response.data);
       
       // Reset form
@@ -576,10 +609,23 @@ const AddExpense = ({ categories, onExpenseAdded, user }) => {
 
       onExpenseAdded();
       alert('Expense added successfully!');
+      
     } catch (error) {
       console.error('Error adding expense:', error);
       console.error('Error response:', error.response?.data);
-      alert(error.response?.data?.detail || 'Error adding expense. Please check the console for details.');
+      
+      // Show detailed error message
+      let errorMessage = 'Error adding expense';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        errorMessage = `Validation errors: ${errors.map(e => e.msg).join(', ')}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`${errorMessage}\n\nPlease check the console for more details.`);
     }
   };
 

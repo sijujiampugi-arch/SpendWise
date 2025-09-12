@@ -62,21 +62,51 @@ class SessionData(BaseModel):
     picture: str
     session_token: str
 
-# Expense Models
+# Shared Expense Models
+class ExpenseSplit(BaseModel):
+    user_email: str
+    percentage: float
+    amount: float
+    paid: bool = False
+
+class SharedExpense(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    amount: float
+    category: str
+    description: str
+    date: date
+    created_by: str  # user_id who created the expense
+    paid_by: str  # user_id who paid initially
+    splits: List[ExpenseSplit]
+    is_shared: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SharedExpenseCreate(BaseModel):
+    amount: float
+    category: str
+    description: str
+    date: date
+    paid_by_email: str  # email of person who paid
+    splits: List[Dict[str, Any]]  # [{"email": "user@example.com", "percentage": 50}]
+
+# Regular Expense Models
 class Expense(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     amount: float
-    category: ExpenseCategory
+    category: str
     description: str
     date: date
     user_id: str
+    is_shared: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ExpenseCreate(BaseModel):
     amount: float
-    category: ExpenseCategory
+    category: str
     description: str
     date: date
+    is_shared: bool = False
+    shared_data: Optional[Dict[str, Any]] = None
 
 class ExpenseStats(BaseModel):
     total_expenses: float
@@ -104,6 +134,16 @@ class CustomCategoryCreate(BaseModel):
     name: str
     color: str
     icon: str
+
+# Settlement Models
+class Settlement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    from_user: str
+    to_user: str
+    amount: float
+    description: str
+    settled: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Helper functions
 def prepare_for_mongo(data):
@@ -167,6 +207,18 @@ async def require_auth(request: Request, session_token: Optional[str] = Cookie(N
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     return user
+
+# Helper function to find user by email
+async def find_user_by_email(email: str) -> Optional[User]:
+    """Find user by email address"""
+    try:
+        user_data = await db.users.find_one({"email": email})
+        if user_data:
+            return User(**parse_from_mongo(user_data))
+        return None
+    except Exception as e:
+        logging.error(f"Error finding user by email: {e}")
+        return None
 
 # Category configurations with Apple-like colors
 CATEGORY_CONFIG = {
@@ -362,16 +414,90 @@ async def create_custom_category(category_data: CustomCategoryCreate, user: User
 # Expense Routes
 @api_router.get("/")
 async def root():
-    return {"message": "SpendWise API - Expense Tracking App"}
+    return {"message": "SpendWise API - Enhanced Expense Tracking with Shared Expenses"}
 
 @api_router.post("/expenses", response_model=Expense)
 async def create_expense(expense_data: ExpenseCreate, user: User = Depends(require_auth)):
-    """Create a new expense"""
+    """Create a new expense (shared or individual)"""
     try:
-        expense = Expense(**expense_data.dict(), user_id=user.id)
-        expense_dict = prepare_for_mongo(expense.dict())
-        await db.expenses.insert_one(expense_dict)
-        return expense
+        if expense_data.is_shared and expense_data.shared_data:
+            # Create shared expense
+            shared_data = expense_data.shared_data
+            
+            # Find the user who paid
+            paid_by_user = await find_user_by_email(shared_data["paid_by_email"])
+            if not paid_by_user:
+                raise HTTPException(status_code=400, detail="Paid by user not found")
+            
+            # Calculate splits
+            splits = []
+            total_percentage = 0
+            
+            for split_data in shared_data["splits"]:
+                split_user = await find_user_by_email(split_data["email"])
+                if not split_user:
+                    raise HTTPException(status_code=400, detail=f"User {split_data['email']} not found")
+                
+                percentage = split_data["percentage"]
+                amount = (expense_data.amount * percentage) / 100
+                total_percentage += percentage
+                
+                splits.append(ExpenseSplit(
+                    user_email=split_data["email"],
+                    percentage=percentage,
+                    amount=amount,
+                    paid=(split_data["email"] == shared_data["paid_by_email"])
+                ))
+            
+            if abs(total_percentage - 100) > 0.01:
+                raise HTTPException(status_code=400, detail="Split percentages must total 100%")
+            
+            # Create shared expense record
+            shared_expense = SharedExpense(
+                amount=expense_data.amount,
+                category=expense_data.category,
+                description=expense_data.description,
+                date=expense_data.date,
+                created_by=user.id,
+                paid_by=paid_by_user.id,
+                splits=splits
+            )
+            
+            await db.shared_expenses.insert_one(prepare_for_mongo(shared_expense.dict()))
+            
+            # Create individual expense records for each participant
+            for split in splits:
+                split_user = await find_user_by_email(split.user_email)
+                individual_expense = Expense(
+                    amount=split.amount,
+                    category=expense_data.category,
+                    description=f"[SHARED] {expense_data.description}",
+                    date=expense_data.date,
+                    user_id=split_user.id,
+                    is_shared=True
+                )
+                await db.expenses.insert_one(prepare_for_mongo(individual_expense.dict()))
+            
+            # Return the main user's portion as response
+            user_split = next((s for s in splits if s.user_email == user.email), splits[0])
+            return Expense(
+                amount=user_split.amount,
+                category=expense_data.category,
+                description=f"[SHARED] {expense_data.description}",
+                date=expense_data.date,
+                user_id=user.id,
+                is_shared=True
+            )
+        
+        else:
+            # Create regular individual expense
+            expense = Expense(**expense_data.dict(), user_id=user.id)
+            expense_dict = prepare_for_mongo(expense.dict())
+            await db.expenses.insert_one(expense_dict)
+            return expense
+            
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -504,6 +630,74 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Expense not found")
         return {"message": "Expense deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Shared Expenses Routes
+@api_router.get("/shared-expenses", response_model=List[SharedExpense])
+async def get_shared_expenses(user: User = Depends(require_auth)):
+    """Get shared expenses where user is involved"""
+    try:
+        # Find shared expenses where user is in splits or created by user
+        shared_expenses = await db.shared_expenses.find({
+            "$or": [
+                {"created_by": user.id},
+                {"splits.user_email": user.email}
+            ]
+        }).sort("date", -1).to_list(length=None)
+        
+        result = []
+        for expense in shared_expenses:
+            result.append(SharedExpense(**parse_from_mongo(expense)))
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.get("/settlements")
+async def get_settlements(user: User = Depends(require_auth)):
+    """Get settlement balances for current user"""
+    try:
+        # Calculate who owes what based on shared expenses
+        balances = {}
+        
+        # Get all shared expenses involving this user
+        shared_expenses = await db.shared_expenses.find({
+            "splits.user_email": user.email
+        }).to_list(length=None)
+        
+        for expense in shared_expenses:
+            paid_by_user = await db.users.find_one({"id": expense["paid_by"]})
+            if not paid_by_user:
+                continue
+                
+            for split in expense["splits"]:
+                if split["user_email"] == user.email and not split["paid"]:
+                    # Current user owes money
+                    owed_to = paid_by_user["email"]
+                    if owed_to not in balances:
+                        balances[owed_to] = {"owes": 0, "owed": 0}
+                    balances[owed_to]["owes"] += split["amount"]
+                
+                elif split["user_email"] != user.email and expense["paid_by"] == user.id:
+                    # Current user is owed money
+                    owed_by = split["user_email"]
+                    if owed_by not in balances:
+                        balances[owed_by] = {"owes": 0, "owed": 0}
+                    balances[owed_by]["owed"] += split["amount"]
+        
+        # Calculate net balances
+        net_balances = []
+        for person, amounts in balances.items():
+            net_amount = amounts["owed"] - amounts["owes"]
+            if abs(net_amount) > 0.01:  # Only show significant balances
+                net_balances.append({
+                    "person": person,
+                    "amount": abs(net_amount),
+                    "type": "owed_to_you" if net_amount > 0 else "you_owe"
+                })
+        
+        return {"balances": net_balances}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

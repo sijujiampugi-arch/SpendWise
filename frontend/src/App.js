@@ -227,10 +227,22 @@ function MainApp() {
             📝 Expenses
           </button>
           <button 
+            className={`nav-button ${currentView === 'shared' ? 'active' : ''}`}
+            onClick={() => setCurrentView('shared')}
+          >
+            👥 Shared
+          </button>
+          <button 
             className={`nav-button ${currentView === 'categories' ? 'active' : ''}`}
             onClick={() => setCurrentView('categories')}
           >
             🏷️ Categories
+          </button>
+          <button 
+            className={`nav-button ${currentView === 'import' ? 'active' : ''}`}
+            onClick={() => setCurrentView('import')}
+          >
+            📄 Import
           </button>
         </nav>
 
@@ -270,13 +282,19 @@ function MainApp() {
                 <Dashboard stats={stats} categories={categories} />
               )}
               {currentView === 'add' && (
-                <AddExpense categories={categories} onExpenseAdded={loadData} />
+                <AddExpense categories={categories} onExpenseAdded={loadData} user={user} />
               )}
               {currentView === 'expenses' && (
                 <ExpensesList expenses={expenses} categories={categories} onExpenseDeleted={loadData} />
               )}
+              {currentView === 'shared' && (
+                <SharedExpenses user={user} onExpenseAdded={loadData} />
+              )}
               {currentView === 'categories' && (
                 <CategoriesManager categories={categories} onCategoryAdded={loadData} />
+              )}
+              {currentView === 'import' && (
+                <ImportManager categories={categories} onImportComplete={loadData} />
               )}
             </>
           )}
@@ -456,30 +474,86 @@ const Dashboard = ({ stats, categories }) => {
   );
 };
 
-// Add Expense Component
-const AddExpense = ({ categories, onExpenseAdded }) => {
+// Add Expense Component (Enhanced with Shared Expenses)
+const AddExpense = ({ categories, onExpenseAdded, user }) => {
   const [formData, setFormData] = useState({
     amount: '',
     category: categories.length > 0 ? categories[0].name : 'Grocery',
     description: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    is_shared: false
   });
+
+  const [sharedData, setSharedData] = useState({
+    paid_by_email: user?.email || '',
+    splits: [{ email: user?.email || '', percentage: 100 }]
+  });
+
+  const addSplitPerson = () => {
+    setSharedData(prev => ({
+      ...prev,
+      splits: [...prev.splits, { email: '', percentage: 0 }]
+    }));
+  };
+
+  const removeSplitPerson = (index) => {
+    setSharedData(prev => ({
+      ...prev,
+      splits: prev.splits.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateSplit = (index, field, value) => {
+    setSharedData(prev => {
+      const newSplits = [...prev.splits];
+      newSplits[index][field] = value;
+      return { ...prev, splits: newSplits };
+    });
+  };
+
+  const autoSplit = () => {
+    const count = sharedData.splits.length;
+    const splitPercentage = Math.floor(100 / count);
+    const remainder = 100 - (splitPercentage * count);
+    
+    setSharedData(prev => ({
+      ...prev,
+      splits: prev.splits.map((split, index) => ({
+        ...split,
+        percentage: index === 0 ? splitPercentage + remainder : splitPercentage
+      }))
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API}/expenses`, formData, { withCredentials: true });
+      const requestData = {
+        ...formData,
+        shared_data: formData.is_shared ? sharedData : null
+      };
+
+      await axios.post(`${API}/expenses`, requestData, { withCredentials: true });
+      
+      // Reset form
       setFormData({
         amount: '',
         category: categories.length > 0 ? categories[0].name : 'Grocery',
         description: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        is_shared: false
       });
+      
+      setSharedData({
+        paid_by_email: user?.email || '',
+        splits: [{ email: user?.email || '', percentage: 100 }]
+      });
+
       onExpenseAdded();
       alert('Expense added successfully!');
     } catch (error) {
       console.error('Error adding expense:', error);
-      alert('Error adding expense');
+      alert(error.response?.data?.detail || 'Error adding expense');
     }
   };
 
@@ -538,6 +612,87 @@ const AddExpense = ({ categories, onExpenseAdded }) => {
           />
         </div>
 
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={formData.is_shared}
+              onChange={(e) => setFormData({ ...formData, is_shared: e.target.checked })}
+            />
+            <span className="checkmark"></span>
+            Shared Expense
+          </label>
+        </div>
+
+        {formData.is_shared && (
+          <div className="shared-expense-section">
+            <h3>Shared Expense Details</h3>
+            
+            <div className="form-group">
+              <label>Who Paid Initially?</label>
+              <input
+                type="email"
+                value={sharedData.paid_by_email}
+                onChange={(e) => setSharedData({ ...sharedData, paid_by_email: e.target.value })}
+                required
+                className="form-input"
+                placeholder="email@example.com"
+              />
+            </div>
+
+            <div className="splits-section">
+              <div className="splits-header">
+                <label>Split Between:</label>
+                <div className="splits-actions">
+                  <button type="button" onClick={autoSplit} className="auto-split-button">
+                    Equal Split
+                  </button>
+                  <button type="button" onClick={addSplitPerson} className="add-person-button">
+                    + Add Person
+                  </button>
+                </div>
+              </div>
+
+              {sharedData.splits.map((split, index) => (
+                <div key={index} className="split-row">
+                  <input
+                    type="email"
+                    value={split.email}
+                    onChange={(e) => updateSplit(index, 'email', e.target.value)}
+                    placeholder="email@example.com"
+                    className="form-input split-email"
+                    required
+                  />
+                  <input
+                    type="number"
+                    value={split.percentage}
+                    onChange={(e) => updateSplit(index, 'percentage', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    className="form-input split-percentage"
+                    min="0"
+                    max="100"
+                    required
+                  />
+                  <span className="percentage-symbol">%</span>
+                  {sharedData.splits.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeSplitPerson(index)}
+                      className="remove-person-button"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <div className="split-total">
+                Total: {sharedData.splits.reduce((sum, split) => sum + (split.percentage || 0), 0)}%
+              </div>
+            </div>
+          </div>
+        )}
+
         <button type="submit" className="submit-button">
           Add Expense
         </button>
@@ -588,6 +743,7 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
                 <h4>{expense.description}</h4>
                 <p className="expense-category">{expense.category}</p>
                 <p className="expense-date">{new Date(expense.date).toLocaleDateString()}</p>
+                {expense.is_shared && <span className="shared-badge">👥 Shared</span>}
               </div>
               <div className="expense-amount">
                 <span>{formatCurrency(expense.amount)}</span>
@@ -603,6 +759,105 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
           ))}
         </div>
       )}
+    </div>
+  );
+};
+
+// Shared Expenses Component
+const SharedExpenses = ({ user, onExpenseAdded }) => {
+  const [sharedExpenses, setSharedExpenses] = useState([]);
+  const [settlements, setSettlements] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSharedData();
+  }, []);
+
+  const loadSharedData = async () => {
+    setLoading(true);
+    try {
+      // Load shared expenses
+      const sharedRes = await axios.get(`${API}/shared-expenses`, { withCredentials: true });
+      setSharedExpenses(sharedRes.data);
+
+      // Load settlements
+      const settlementsRes = await axios.get(`${API}/settlements`, { withCredentials: true });
+      setSettlements(settlementsRes.data.balances);
+    } catch (error) {
+      console.error('Error loading shared data:', error);
+    }
+    setLoading(false);
+  };
+
+  if (loading) {
+    return <div className="loading">Loading shared expenses...</div>;
+  }
+
+  return (
+    <div className="shared-expenses">
+      <h2>Shared Expenses & Settlements</h2>
+      
+      {/* Settlements Section */}
+      <div className="settlements-section">
+        <h3>💰 Settlements</h3>
+        {settlements.length === 0 ? (
+          <div className="no-settlements">
+            <p>All settled up! 🎉</p>
+          </div>
+        ) : (
+          <div className="settlements-list">
+            {settlements.map((settlement, index) => (
+              <div key={index} className={`settlement-item ${settlement.type}`}>
+                <div className="settlement-info">
+                  <span className="settlement-person">{settlement.person}</span>
+                  <span className="settlement-amount">{formatCurrency(settlement.amount)}</span>
+                </div>
+                <div className="settlement-type">
+                  {settlement.type === 'owed_to_you' ? '💚 Owes you' : '💸 You owe'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Shared Expenses History */}
+      <div className="shared-history-section">
+        <h3>📋 Shared Expenses History</h3>
+        {sharedExpenses.length === 0 ? (
+          <div className="no-shared-expenses">
+            <p>No shared expenses yet. Create one using "Add Expense" with the shared option!</p>
+          </div>
+        ) : (
+          <div className="shared-expenses-list">
+            {sharedExpenses.map(expense => (
+              <div key={expense.id} className="shared-expense-item">
+                <div className="shared-expense-header">
+                  <h4>{expense.description}</h4>
+                  <span className="shared-expense-amount">{formatCurrency(expense.amount)}</span>
+                </div>
+                <div className="shared-expense-details">
+                  <p><strong>Category:</strong> {expense.category}</p>
+                  <p><strong>Date:</strong> {new Date(expense.date).toLocaleDateString()}</p>
+                  <p><strong>Paid by:</strong> {expense.paid_by}</p>
+                </div>
+                <div className="shared-expense-splits">
+                  <h5>Split Details:</h5>
+                  {expense.splits.map((split, index) => (
+                    <div key={index} className="split-detail">
+                      <span className="split-person">{split.user_email}</span>
+                      <span className="split-info">
+                        {split.percentage}% ({formatCurrency(split.amount)})
+                        {split.paid && <span className="paid-badge">✅ Paid</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -711,6 +966,215 @@ const CategoriesManager = ({ categories, onCategoryAdded }) => {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+// Import Manager Component
+const ImportManager = ({ categories, onImportComplete }) => {
+  const [importFile, setImportFile] = useState(null);
+  const [previewData, setPreviewData] = useState(null);
+  const [columnMapping, setColumnMapping] = useState({});
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setImportFile(file);
+    setPreviewData(null);
+    setImportResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(`${API}/import/preview`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
+
+      setPreviewData(response.data);
+      setColumnMapping(response.data.detected_columns);
+    } catch (error) {
+      console.error('Error previewing file:', error);
+      alert(error.response?.data?.detail || 'Error previewing file');
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile || !previewData) return;
+
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+      formData.append('column_mapping', JSON.stringify(columnMapping));
+
+      const response = await axios.post(`${API}/import/execute`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
+
+      setImportResult(response.data);
+      onImportComplete();
+    } catch (error) {
+      console.error('Error importing file:', error);
+      alert(error.response?.data?.detail || 'Error importing file');
+    }
+    setImporting(false);
+  };
+
+  return (
+    <div className="import-manager">
+      <h2>Import Expenses from Spreadsheet</h2>
+      
+      <div className="import-section">
+        <div className="file-upload-section">
+          <h3>1. Select File</h3>
+          <input
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            onChange={handleFileSelect}
+            className="file-input"
+          />
+          <p className="file-help">Supported formats: CSV, Excel (.xlsx, .xls)</p>
+        </div>
+
+        {previewData && (
+          <div className="preview-section">
+            <h3>2. Preview & Column Mapping</h3>
+            <div className="import-stats">
+              <p><strong>Total Rows:</strong> {previewData.total_rows}</p>
+              <p><strong>Auto-detected columns:</strong> {Object.keys(previewData.detected_columns).length}</p>
+            </div>
+
+            <div className="column-mapping">
+              <h4>Column Mapping</h4>
+              <div className="mapping-grid">
+                <div className="mapping-row">
+                  <label>Amount Column *</label>
+                  <select
+                    value={columnMapping.amount || ''}
+                    onChange={(e) => setColumnMapping({ ...columnMapping, amount: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Select column</option>
+                    {Object.keys(previewData.preview_data[0] || {}).map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mapping-row">
+                  <label>Description Column *</label>
+                  <select
+                    value={columnMapping.description || ''}
+                    onChange={(e) => setColumnMapping({ ...columnMapping, description: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Select column</option>
+                    {Object.keys(previewData.preview_data[0] || {}).map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mapping-row">
+                  <label>Category Column</label>
+                  <select
+                    value={columnMapping.category || ''}
+                    onChange={(e) => setColumnMapping({ ...columnMapping, category: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Select column (optional)</option>
+                    {Object.keys(previewData.preview_data[0] || {}).map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mapping-row">
+                  <label>Date Column</label>
+                  <select
+                    value={columnMapping.date || ''}
+                    onChange={(e) => setColumnMapping({ ...columnMapping, date: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Select column (optional)</option>
+                    {Object.keys(previewData.preview_data[0] || {}).map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="preview-table">
+              <h4>Data Preview</h4>
+              <table className="preview-data-table">
+                <thead>
+                  <tr>
+                    {Object.keys(previewData.preview_data[0] || {}).map(col => (
+                      <th key={col}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewData.preview_data.map((row, index) => (
+                    <tr key={index}>
+                      {Object.values(row).map((value, cellIndex) => (
+                        <td key={cellIndex}>{String(value)}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="import-actions">
+              <button
+                onClick={handleImport}
+                disabled={importing || !columnMapping.amount || !columnMapping.description}
+                className="import-button"
+              >
+                {importing ? 'Importing...' : `Import ${previewData.total_rows} Expenses`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {importResult && (
+          <div className="import-result">
+            <h3>3. Import Results</h3>
+            <div className="result-stats">
+              <div className="result-card success">
+                <h4>✅ Successful</h4>
+                <p>{importResult.successful} expenses</p>
+              </div>
+              <div className="result-card error">
+                <h4>❌ Failed</h4>
+                <p>{importResult.failed} expenses</p>
+              </div>
+            </div>
+
+            {importResult.errors.length > 0 && (
+              <div className="import-errors">
+                <h4>Errors:</h4>
+                <ul>
+                  {importResult.errors.slice(0, 10).map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                  {importResult.errors.length > 10 && (
+                    <li>... and {importResult.errors.length - 10} more errors</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -455,39 +455,66 @@ async def root():
 async def create_expense(expense_data: ExpenseCreate, user: User = Depends(require_auth)):
     """Create a new expense (shared or individual)"""
     try:
+        logging.info(f"Creating expense for user {user.email}: {expense_data.dict()}")
+        
         if expense_data.is_shared and expense_data.shared_data:
             # Create shared expense
             shared_data = expense_data.shared_data
+            logging.info(f"Processing shared expense: {shared_data}")
+            
+            # Validate shared_data structure
+            if not isinstance(shared_data, dict):
+                raise HTTPException(status_code=400, detail="shared_data must be an object")
+            
+            # Validate required fields in shared_data
+            if "paid_by_email" not in shared_data:
+                raise HTTPException(status_code=400, detail="paid_by_email is required for shared expenses")
+            
+            if "splits" not in shared_data or not isinstance(shared_data["splits"], list):
+                raise HTTPException(status_code=400, detail="splits array is required for shared expenses")
             
             # Validate email format for paid_by_email
             paid_by_email = shared_data["paid_by_email"]
             if not paid_by_email or "@" not in paid_by_email:
-                raise HTTPException(status_code=400, detail="Invalid paid by email")
+                raise HTTPException(status_code=400, detail="Invalid paid by email format")
             
             # Calculate splits
             splits = []
             total_percentage = 0
             
-            for split_data in shared_data["splits"]:
-                if not split_data.get("email") or "@" not in split_data["email"]:
-                    raise HTTPException(status_code=400, detail="Invalid email in splits")
+            for i, split_data in enumerate(shared_data["splits"]):
+                if not isinstance(split_data, dict):
+                    raise HTTPException(status_code=400, detail=f"Split {i+1} must be an object")
                 
-                percentage = split_data["percentage"]
-                if percentage <= 0:
-                    raise HTTPException(status_code=400, detail="Split percentage must be greater than 0")
+                if "email" not in split_data or "percentage" not in split_data:
+                    raise HTTPException(status_code=400, detail=f"Split {i+1} must have email and percentage")
+                
+                email = split_data["email"]
+                if not email or "@" not in email:
+                    raise HTTPException(status_code=400, detail=f"Invalid email in split {i+1}: {email}")
+                
+                try:
+                    percentage = float(split_data["percentage"])
+                except (ValueError, TypeError):
+                    raise HTTPException(status_code=400, detail=f"Invalid percentage in split {i+1}")
+                
+                if percentage <= 0 or percentage > 100:
+                    raise HTTPException(status_code=400, detail=f"Split percentage must be between 0 and 100, got {percentage}")
                 
                 amount = (expense_data.amount * percentage) / 100
                 total_percentage += percentage
                 
                 splits.append(ExpenseSplit(
-                    user_email=split_data["email"],
+                    user_email=email,
                     percentage=percentage,
                     amount=amount,
-                    paid=(split_data["email"] == paid_by_email)
+                    paid=(email == paid_by_email)
                 ))
             
             if abs(total_percentage - 100) > 0.01:
-                raise HTTPException(status_code=400, detail="Split percentages must total 100%")
+                raise HTTPException(status_code=400, detail=f"Split percentages must total 100%, got {total_percentage}%")
+            
+            logging.info(f"Creating shared expense with {len(splits)} splits, total {total_percentage}%")
             
             # Create shared expense record
             shared_expense = SharedExpense(
@@ -501,6 +528,7 @@ async def create_expense(expense_data: ExpenseCreate, user: User = Depends(requi
             )
             
             await db.shared_expenses.insert_one(prepare_for_mongo(shared_expense.dict()))
+            logging.info(f"Shared expense created with ID: {shared_expense.id}")
             
             # Create individual expense record for the current user (their portion)
             user_split = next((s for s in splits if s.user_email == user.email), None)
@@ -514,6 +542,7 @@ async def create_expense(expense_data: ExpenseCreate, user: User = Depends(requi
                     is_shared=True
                 )
                 await db.expenses.insert_one(prepare_for_mongo(individual_expense.dict()))
+                logging.info(f"Individual expense created for user {user.email}: {user_split.amount}")
                 return individual_expense
             else:
                 # If current user is not in splits, create with 0 amount for tracking
@@ -526,20 +555,23 @@ async def create_expense(expense_data: ExpenseCreate, user: User = Depends(requi
                     is_shared=True
                 )
                 await db.expenses.insert_one(prepare_for_mongo(individual_expense.dict()))
+                logging.info(f"Creator expense created for user {user.email} (not in splits)")
                 return individual_expense
         
         else:
             # Create regular individual expense
+            logging.info(f"Creating individual expense")
             expense = Expense(**expense_data.dict(), user_id=user.id)
             expense_dict = prepare_for_mongo(expense.dict())
             await db.expenses.insert_one(expense_dict)
+            logging.info(f"Individual expense created with ID: {expense.id}")
             return expense
             
     except HTTPException:
         raise
     except Exception as e:
-        logging.error(f"Error creating expense: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        logging.error(f"Unexpected error creating expense: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @api_router.get("/expenses", response_model=List[Expense])
 async def get_expenses(

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Testing for SpendWise Expense Tracking App
-Tests all endpoints with various scenarios including edge cases
+Comprehensive Backend API Testing for SpendWise Expense Tracking App with Authentication
+Tests all endpoints including Emergent Google Social Login authentication system
 """
 
 import requests
@@ -19,6 +19,15 @@ VALID_CATEGORIES = [
     "Grocery", "Fuel", "Dining Out", "Shopping", "Bills", 
     "Healthcare", "Entertainment", "Transport", "Other"
 ]
+
+# Mock session data for testing (since we can't complete full OAuth flow)
+MOCK_SESSION_DATA = {
+    "id": "test-user-123",
+    "email": "testuser@example.com",
+    "name": "Test User",
+    "picture": "https://example.com/avatar.jpg",
+    "session_token": "mock-session-token-" + str(uuid.uuid4())
+}
 
 class BackendTester:
     def __init__(self):

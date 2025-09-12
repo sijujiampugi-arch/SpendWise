@@ -716,6 +716,200 @@ async def get_settlements(user: User = Depends(require_auth)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# Spreadsheet Import Routes
+@api_router.post("/import/preview")
+async def preview_import(file: UploadFile = File(...), user: User = Depends(require_auth)):
+    """Preview spreadsheet import with smart column detection"""
+    try:
+        if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
+            raise HTTPException(status_code=400, detail="Only CSV and Excel files are supported")
+        
+        # Read file content
+        file_content = await file.read()
+        
+        # Parse file based on extension
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(file_content))
+        else:
+            df = pd.read_excel(io.BytesIO(file_content))
+        
+        if df.empty:
+            raise HTTPException(status_code=400, detail="File is empty")
+        
+        # Smart column detection
+        detected_columns = {}
+        column_mapping = {
+            'amount': ['amount', 'cost', 'price', 'total', 'value', 'expense'],
+            'description': ['description', 'desc', 'detail', 'note', 'item', 'title'],
+            'category': ['category', 'type', 'class', 'group'],
+            'date': ['date', 'timestamp', 'time', 'when', 'created']
+        }
+        
+        for required_field, possible_names in column_mapping.items():
+            for col_name in df.columns:
+                if any(possible in col_name.lower() for possible in possible_names):
+                    detected_columns[required_field] = col_name
+                    break
+        
+        # Get preview data (first 5 rows)
+        preview_data = df.head(5).fillna('').to_dict('records')
+        
+        # Calculate import stats
+        import_stats = {
+            'total_rows': len(df),
+            'has_amount': 'amount' in detected_columns,
+            'has_description': 'description' in detected_columns,
+            'has_category': 'category' in detected_columns,
+            'has_date': 'date' in detected_columns,
+            'missing_required': []
+        }
+        
+        # Check for required fields
+        required_fields = ['amount', 'description']
+        for field in required_fields:
+            if field not in detected_columns:
+                import_stats['missing_required'].append(field)
+        
+        return ImportPreview(
+            total_rows=len(df),
+            preview_data=preview_data,
+            detected_columns=detected_columns,
+            import_stats=import_stats
+        )
+        
+    except pd.errors.EmptyDataError:
+        raise HTTPException(status_code=400, detail="File is empty or corrupted")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error processing file: {str(e)}")
+
+@api_router.post("/import/execute")
+async def execute_import(
+    file: UploadFile = File(...),
+    column_mapping: str = Query(..., description="JSON string of column mappings"),
+    user: User = Depends(require_auth)
+):
+    """Execute spreadsheet import with custom column mapping"""
+    try:
+        import json
+        
+        # Parse column mapping
+        try:
+            mapping = json.loads(column_mapping)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid column mapping JSON")
+        
+        # Read file
+        file_content = await file.read()
+        
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(file_content))
+        else:
+            df = pd.read_excel(io.BytesIO(file_content))
+        
+        if df.empty:
+            raise HTTPException(status_code=400, detail="File is empty")
+        
+        # Validate required mappings
+        required_fields = ['amount', 'description']
+        for field in required_fields:
+            if field not in mapping or not mapping[field]:
+                raise HTTPException(status_code=400, detail=f"Missing required field mapping: {field}")
+        
+        # Process imports
+        successful = 0
+        failed = 0
+        errors = []
+        
+        for index, row in df.iterrows():
+            try:
+                # Extract data based on mapping
+                amount_str = str(row.get(mapping['amount'], '')).strip()
+                if not amount_str or amount_str.lower() in ['nan', 'none', '']:
+                    errors.append(f"Row {index + 1}: Missing amount")
+                    failed += 1
+                    continue
+                
+                # Clean and parse amount
+                amount_str = amount_str.replace('₱', '').replace(',', '').replace('$', '')
+                try:
+                    amount = float(amount_str)
+                    if amount <= 0:
+                        errors.append(f"Row {index + 1}: Invalid amount (must be positive)")
+                        failed += 1
+                        continue
+                except ValueError:
+                    errors.append(f"Row {index + 1}: Invalid amount format")
+                    failed += 1
+                    continue
+                
+                # Extract description
+                description = str(row.get(mapping['description'], '')).strip()
+                if not description or description.lower() in ['nan', 'none']:
+                    errors.append(f"Row {index + 1}: Missing description")
+                    failed += 1
+                    continue
+                
+                # Extract category (optional)
+                category = 'Other'  # Default category
+                if 'category' in mapping and mapping['category']:
+                    cat_value = str(row.get(mapping['category'], '')).strip()
+                    if cat_value and cat_value.lower() not in ['nan', 'none', '']:
+                        # Check if category exists in user's available categories
+                        existing_categories = await db.categories.find({
+                            "$or": [
+                                {"is_system": True},
+                                {"created_by": user.id}
+                            ]
+                        }).to_list(length=None)
+                        
+                        category_names = [cat["name"] for cat in existing_categories]
+                        if cat_value in category_names:
+                            category = cat_value
+                        else:
+                            # Use default but log warning
+                            category = 'Other'
+                
+                # Extract date (optional)
+                expense_date = date.today()
+                if 'date' in mapping and mapping['date']:
+                    date_value = row.get(mapping['date'])
+                    if pd.notna(date_value):
+                        try:
+                            if isinstance(date_value, str):
+                                expense_date = pd.to_datetime(date_value).date()
+                            else:
+                                expense_date = pd.to_datetime(date_value).date()
+                        except:
+                            # Use today's date if parsing fails
+                            expense_date = date.today()
+                
+                # Create expense
+                expense = Expense(
+                    amount=amount,
+                    category=category,
+                    description=f"[IMPORTED] {description}",
+                    date=expense_date,
+                    user_id=user.id,
+                    is_shared=False
+                )
+                
+                await db.expenses.insert_one(prepare_for_mongo(expense.dict()))
+                successful += 1
+                
+            except Exception as e:
+                errors.append(f"Row {index + 1}: {str(e)}")
+                failed += 1
+        
+        return ImportResult(
+            total_imported=successful + failed,
+            successful=successful,
+            failed=failed,
+            errors=errors
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Import error: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 

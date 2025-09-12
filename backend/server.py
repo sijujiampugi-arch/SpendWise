@@ -78,7 +78,7 @@ class SharedExpense(BaseModel):
     description: str
     date: date
     created_by: str  # user_id who created the expense
-    paid_by: str  # user_id who paid initially
+    paid_by: str  # email of person who paid initially
     splits: List[ExpenseSplit]
     is_shared: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

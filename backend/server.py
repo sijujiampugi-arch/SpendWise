@@ -439,21 +439,23 @@ async def create_expense(expense_data: ExpenseCreate, user: User = Depends(requi
             # Create shared expense
             shared_data = expense_data.shared_data
             
-            # Find the user who paid
-            paid_by_user = await find_user_by_email(shared_data["paid_by_email"])
-            if not paid_by_user:
-                raise HTTPException(status_code=400, detail="Paid by user not found")
+            # Validate email format for paid_by_email
+            paid_by_email = shared_data["paid_by_email"]
+            if not paid_by_email or "@" not in paid_by_email:
+                raise HTTPException(status_code=400, detail="Invalid paid by email")
             
             # Calculate splits
             splits = []
             total_percentage = 0
             
             for split_data in shared_data["splits"]:
-                split_user = await find_user_by_email(split_data["email"])
-                if not split_user:
-                    raise HTTPException(status_code=400, detail=f"User {split_data['email']} not found")
+                if not split_data.get("email") or "@" not in split_data["email"]:
+                    raise HTTPException(status_code=400, detail="Invalid email in splits")
                 
                 percentage = split_data["percentage"]
+                if percentage <= 0:
+                    raise HTTPException(status_code=400, detail="Split percentage must be greater than 0")
+                
                 amount = (expense_data.amount * percentage) / 100
                 total_percentage += percentage
                 
@@ -461,7 +463,7 @@ async def create_expense(expense_data: ExpenseCreate, user: User = Depends(requi
                     user_email=split_data["email"],
                     percentage=percentage,
                     amount=amount,
-                    paid=(split_data["email"] == shared_data["paid_by_email"])
+                    paid=(split_data["email"] == paid_by_email)
                 ))
             
             if abs(total_percentage - 100) > 0.01:
@@ -474,35 +476,37 @@ async def create_expense(expense_data: ExpenseCreate, user: User = Depends(requi
                 description=expense_data.description,
                 date=expense_data.date,
                 created_by=user.id,
-                paid_by=paid_by_user.id,
+                paid_by=paid_by_email,  # Store email instead of user_id
                 splits=splits
             )
             
             await db.shared_expenses.insert_one(prepare_for_mongo(shared_expense.dict()))
             
-            # Create individual expense records for each participant
-            for split in splits:
-                split_user = await find_user_by_email(split.user_email)
+            # Create individual expense record for the current user (their portion)
+            user_split = next((s for s in splits if s.user_email == user.email), None)
+            if user_split:
                 individual_expense = Expense(
-                    amount=split.amount,
+                    amount=user_split.amount,
                     category=expense_data.category,
                     description=f"[SHARED] {expense_data.description}",
                     date=expense_data.date,
-                    user_id=split_user.id,
+                    user_id=user.id,
                     is_shared=True
                 )
                 await db.expenses.insert_one(prepare_for_mongo(individual_expense.dict()))
-            
-            # Return the main user's portion as response
-            user_split = next((s for s in splits if s.user_email == user.email), splits[0])
-            return Expense(
-                amount=user_split.amount,
-                category=expense_data.category,
-                description=f"[SHARED] {expense_data.description}",
-                date=expense_data.date,
-                user_id=user.id,
-                is_shared=True
-            )
+                return individual_expense
+            else:
+                # If current user is not in splits, create with 0 amount for tracking
+                individual_expense = Expense(
+                    amount=0,
+                    category=expense_data.category,
+                    description=f"[SHARED - CREATED] {expense_data.description}",
+                    date=expense_data.date,
+                    user_id=user.id,
+                    is_shared=True
+                )
+                await db.expenses.insert_one(prepare_for_mongo(individual_expense.dict()))
+                return individual_expense
         
         else:
             # Create regular individual expense
@@ -514,6 +518,7 @@ async def create_expense(expense_data: ExpenseCreate, user: User = Depends(requi
     except HTTPException:
         raise
     except Exception as e:
+        logging.error(f"Error creating expense: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @api_router.get("/expenses", response_model=List[Expense])

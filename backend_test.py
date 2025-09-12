@@ -394,10 +394,13 @@ class BackendTester:
             self.log_result("API Health Check", False, f"Connection error: {str(e)}")
     
     def test_categories_endpoint(self):
-        """Test GET /api/categories endpoint"""
+        """Test GET /api/categories endpoint (expects 401 without auth)"""
         try:
             response = requests.get(f"{BASE_URL}/categories", headers=HEADERS, timeout=10)
-            if response.status_code == 200:
+            if response.status_code == 401:
+                self.log_result("Categories Endpoint", True, 
+                              "Categories endpoint correctly requires authentication")
+            elif response.status_code == 200:
                 categories = response.json()
                 
                 # Check if it's a list

@@ -1,10 +1,91 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import './App.css';
 import axios from 'axios';
 import * as d3 from 'd3';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Create Authentication Context
+const AuthContext = createContext();
+
+// Authentication Provider Component
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    checkExistingSession();
+  }, []);
+
+  // Process session ID from URL fragment
+  useEffect(() => {
+    const processSessionId = async () => {
+      const hash = window.location.hash;
+      if (hash.includes('session_id=')) {
+        setLoading(true);
+        const sessionId = hash.split('session_id=')[1].split('&')[0];
+        
+        try {
+          const response = await axios.post(`${API}/auth/session-data`, {}, {
+            headers: { 'X-Session-ID': sessionId },
+            withCredentials: true
+          });
+          
+          setUser(response.data);
+          // Clean URL fragment
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (error) {
+          console.error('Error processing session:', error);
+        }
+        setLoading(false);
+      }
+    };
+
+    processSessionId();
+  }, []);
+
+  const checkExistingSession = async () => {
+    try {
+      const response = await axios.get(`${API}/auth/me`, { withCredentials: true });
+      setUser(response.data);
+    } catch (error) {
+      // No existing session
+      setUser(null);
+    }
+    setLoading(false);
+  };
+
+  const login = () => {
+    const redirectUrl = encodeURIComponent(window.location.origin);
+    window.location.href = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
+  };
+
+  const logout = async () => {
+    try {
+      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// Custom hook to use auth context
+const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 // Philippine Peso formatter
 const formatCurrency = (amount) => {
@@ -14,8 +95,41 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
+// Login Component
+const LoginPage = () => {
+  const { login } = useAuth();
+
+  return (
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-header">
+          <h1 className="app-title">SpendWise</h1>
+          <p className="app-subtitle">Smart expense tracking</p>
+        </div>
+        <div className="login-content">
+          <h2>Welcome Back!</h2>
+          <p>Track your expenses with beautiful insights and charts</p>
+          <button onClick={login} className="google-login-button">
+            <span className="google-icon">🚀</span>
+            Continue with Google
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Loading Component
+const LoadingSpinner = () => (
+  <div className="loading-spinner">
+    <div className="spinner"></div>
+    <p>Loading...</p>
+  </div>
+);
+
 // Main App Component
-function App() {
+function MainApp() {
+  const { user, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
   const [expenses, setExpenses] = useState([]);
@@ -25,7 +139,7 @@ function App() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Load data on component mount
+  // Load data on component mount and when filters change
   useEffect(() => {
     loadData();
   }, [selectedMonth, selectedYear]);
@@ -34,18 +148,22 @@ function App() {
     setLoading(true);
     try {
       // Load categories
-      const categoriesRes = await axios.get(`${API}/categories`);
+      const categoriesRes = await axios.get(`${API}/categories`, { withCredentials: true });
       setCategories(categoriesRes.data);
 
       // Load expenses
-      const expensesRes = await axios.get(`${API}/expenses?month=${selectedMonth}&year=${selectedYear}`);
+      const expensesRes = await axios.get(`${API}/expenses?month=${selectedMonth}&year=${selectedYear}`, { withCredentials: true });
       setExpenses(expensesRes.data);
 
       // Load stats
-      const statsRes = await axios.get(`${API}/expenses/stats?month=${selectedMonth}&year=${selectedYear}`);
+      const statsRes = await axios.get(`${API}/expenses/stats?month=${selectedMonth}&year=${selectedYear}`, { withCredentials: true });
       setStats(statsRes.data);
     } catch (error) {
       console.error('Error loading data:', error);
+      if (error.response?.status === 401) {
+        // User session expired, they will be redirected to login
+        return;
+      }
     }
     setLoading(false);
   };
@@ -66,12 +184,23 @@ function App() {
               <p className="app-subtitle">Smart expense tracking</p>
             </div>
             <div className="header-right">
+              <div className="user-info">
+                <img src={user?.picture} alt={user?.name} className="user-avatar" />
+                <span className="user-name">{user?.name}</span>
+              </div>
               <button 
                 className="mode-toggle"
                 onClick={toggleDarkMode}
                 aria-label="Toggle dark mode"
               >
                 {darkMode ? '☀️' : '🌙'}
+              </button>
+              <button 
+                className="logout-button"
+                onClick={logout}
+                aria-label="Logout"
+              >
+                🚪
               </button>
             </div>
           </div>
@@ -96,6 +225,12 @@ function App() {
             onClick={() => setCurrentView('expenses')}
           >
             📝 Expenses
+          </button>
+          <button 
+            className={`nav-button ${currentView === 'categories' ? 'active' : ''}`}
+            onClick={() => setCurrentView('categories')}
+          >
+            🏷️ Categories
           </button>
         </nav>
 
@@ -139,6 +274,9 @@ function App() {
               )}
               {currentView === 'expenses' && (
                 <ExpensesList expenses={expenses} categories={categories} onExpenseDeleted={loadData} />
+              )}
+              {currentView === 'categories' && (
+                <CategoriesManager categories={categories} onCategoryAdded={loadData} />
               )}
             </>
           )}
@@ -322,7 +460,7 @@ const Dashboard = ({ stats, categories }) => {
 const AddExpense = ({ categories, onExpenseAdded }) => {
   const [formData, setFormData] = useState({
     amount: '',
-    category: 'Grocery',
+    category: categories.length > 0 ? categories[0].name : 'Grocery',
     description: '',
     date: new Date().toISOString().split('T')[0]
   });
@@ -330,10 +468,10 @@ const AddExpense = ({ categories, onExpenseAdded }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API}/expenses`, formData);
+      await axios.post(`${API}/expenses`, formData, { withCredentials: true });
       setFormData({
         amount: '',
-        category: 'Grocery',
+        category: categories.length > 0 ? categories[0].name : 'Grocery',
         description: '',
         date: new Date().toISOString().split('T')[0]
       });
@@ -423,7 +561,7 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
   const handleDelete = async (expenseId) => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
       try {
-        await axios.delete(`${API}/expenses/${expenseId}`);
+        await axios.delete(`${API}/expenses/${expenseId}`, { withCredentials: true });
         onExpenseDeleted();
       } catch (error) {
         console.error('Error deleting expense:', error);
@@ -467,6 +605,138 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
       )}
     </div>
   );
+};
+
+// Categories Manager Component
+const CategoriesManager = ({ categories, onCategoryAdded }) => {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    color: '#007AFF',
+    icon: '📦'
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/categories`, formData, { withCredentials: true });
+      setFormData({ name: '', color: '#007AFF', icon: '📦' });
+      setShowCreateForm(false);
+      onCategoryAdded();
+      alert('Category created successfully!');
+    } catch (error) {
+      console.error('Error creating category:', error);
+      alert(error.response?.data?.detail || 'Error creating category');
+    }
+  };
+
+  return (
+    <div className="categories-manager">
+      <div className="categories-header">
+        <h2>Manage Categories</h2>
+        <button 
+          className="add-category-button"
+          onClick={() => setShowCreateForm(true)}
+        >
+          ➕ Add Category
+        </button>
+      </div>
+
+      {showCreateForm && (
+        <div className="create-category-form">
+          <h3>Create New Category</h3>
+          <form onSubmit={handleSubmit} className="category-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label>Category Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  className="form-input"
+                  placeholder="e.g., Coffee Shops"
+                />
+              </div>
+              <div className="form-group">
+                <label>Icon (Emoji)</label>
+                <input
+                  type="text"
+                  value={formData.icon}
+                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                  required
+                  className="form-input emoji-input"
+                  placeholder="☕"
+                  maxLength="2"
+                />
+              </div>
+              <div className="form-group">
+                <label>Color</label>
+                <input
+                  type="color"
+                  value={formData.color}
+                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  className="form-color-input"
+                />
+              </div>
+            </div>
+            <div className="form-actions">
+              <button type="submit" className="submit-button">
+                Create Category
+              </button>
+              <button 
+                type="button" 
+                className="cancel-button"
+                onClick={() => setShowCreateForm(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="categories-grid">
+        {categories.map(category => (
+          <div key={category.name} className="category-card">
+            <div 
+              className="category-icon"
+              style={{ backgroundColor: category.color }}
+            >
+              {category.icon}
+            </div>
+            <div className="category-info">
+              <h4>{category.name}</h4>
+              <p style={{ color: category.color }}>{category.color}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Main App with Authentication
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+const AppContent = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  return <MainApp />;
 };
 
 export default App;

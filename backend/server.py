@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, Cookie
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, Cookie, UploadFile, File
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -11,6 +11,8 @@ from typing import List, Optional, Dict, Any
 import uuid
 import requests
 import asyncio
+import pandas as pd
+import io
 from datetime import datetime, date, timezone, timedelta
 from enum import Enum
 

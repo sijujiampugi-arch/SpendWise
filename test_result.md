@@ -237,13 +237,13 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Emergent Google Social Login authentication system"
-    - "User-based expense isolation and auth middleware"
-    - "Authentication context and session management"
-    - "Custom categories system (system-wide)"
-  stuck_tasks: []
-  test_all: true
-  test_priority: "high_first"
+    - "Shared expense form submission functionality"
+    - "Shared expense creation and validation"
+  stuck_tasks:
+    - "Shared expense form submission functionality"
+    - "Shared expense creation and validation"
+  test_all: false
+  test_priority: "stuck_first"
 
 agent_communication:
   - agent: "main"

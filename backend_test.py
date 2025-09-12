@@ -33,6 +33,9 @@ class BackendTester:
     def __init__(self):
         self.test_results = []
         self.created_expense_ids = []
+        self.session_token = None
+        self.auth_headers = HEADERS.copy()
+        self.auth_cookies = None
         
     def log_result(self, test_name, success, message, details=None):
         """Log test result"""

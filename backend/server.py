@@ -687,19 +687,17 @@ async def get_settlements(user: User = Depends(require_auth)):
         }).to_list(length=None)
         
         for expense in shared_expenses:
-            paid_by_user = await db.users.find_one({"id": expense["paid_by"]})
-            if not paid_by_user:
-                continue
+            paid_by_email = expense["paid_by"]
                 
             for split in expense["splits"]:
                 if split["user_email"] == user.email and not split["paid"]:
                     # Current user owes money
-                    owed_to = paid_by_user["email"]
-                    if owed_to not in balances:
-                        balances[owed_to] = {"owes": 0, "owed": 0}
-                    balances[owed_to]["owes"] += split["amount"]
+                    if paid_by_email != user.email:  # Don't owe yourself
+                        if paid_by_email not in balances:
+                            balances[paid_by_email] = {"owes": 0, "owed": 0}
+                        balances[paid_by_email]["owes"] += split["amount"]
                 
-                elif split["user_email"] != user.email and expense["paid_by"] == user.id:
+                elif split["user_email"] != user.email and paid_by_email == user.email:
                     # Current user is owed money
                     owed_by = split["user_email"]
                     if owed_by not in balances:
@@ -719,6 +717,7 @@ async def get_settlements(user: User = Depends(require_auth)):
         
         return {"balances": net_balances}
     except Exception as e:
+        logging.error(f"Error getting settlements: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 # Spreadsheet Import Routes

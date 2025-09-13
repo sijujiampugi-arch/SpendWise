@@ -1027,7 +1027,6 @@ async def get_expenses(
         filter_query = {}
         
         if month or year:
-            date_filter = {}
             if year:
                 start_date = f"{year}-01-01"
                 end_date = f"{year}-12-31"

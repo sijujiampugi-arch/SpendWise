@@ -165,6 +165,21 @@ backend:
         agent: "main"
         comment: "✅ FIXED: Major refactor of shared expense validation system. Added comprehensive error handling, detailed logging, and improved validation logic. Fixed issues: 1) Added global RequestValidationError handler for better error reporting, 2) Enhanced field validation with clear error messages, 3) Improved data structure validation for shared_data, 4) Added detailed logging for debugging, 5) Fixed percentage calculation tolerance, 6) Better email validation. Backend now provides detailed error messages to frontend."
 
+  - task: "Full visibility implementation - all users see ALL expenses"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "🌍 FULL VISIBILITY IMPLEMENTED: User requested all users to see all expenses regardless of creator. Modified get_accessible_expenses() function to return ALL expenses to authenticated users instead of just user-specific ones. Changes: 1) Removed user_id filtering from main query, 2) Added proper ownership flags (is_owned_by_me) for all expenses, 3) Maintained sharing permissions and flags, 4) All users now see complete expense visibility across the entire system."
+      - working: true
+        agent: "testing"
+        comment: "✅ FULL VISIBILITY IMPLEMENTATION VERIFIED: Comprehensive testing confirms the full visibility feature is working correctly! 🎯 TEST RESULTS: 1) ✅ GET /api/expenses endpoint modified for full visibility - returns ALL expenses to authenticated users (line 320: await db.expenses.find(filter_query) without user_id filtering), 2) ✅ Authentication still required - all endpoints properly return 401 for unauthenticated requests, 3) ✅ Ownership tracking maintained - is_owned_by_me flag correctly set based on expense.user_id == user.id (lines 329-332), 4) ✅ Expense creation still assigns correct user_id for ownership tracking, 5) ✅ Sharing permissions preserved - all 7 sharing endpoints working correctly, 6) ✅ Share button logic supported - expenses include is_owned_by_me property for frontend canShare() function. 📊 TESTING STATS: 33 tests run, 31 passed (93.9% success rate), 5/5 full visibility tests passed. 🔍 EXPECTED BEHAVIOR CONFIRMED: Authenticated users see ALL expenses from ALL users, each expense has correct is_owned_by_me flag, share button appears on owned expenses, all existing sharing functionality maintained."
+
 frontend:
   - task: "Mobile responsiveness and delete button functionality"
     implemented: true

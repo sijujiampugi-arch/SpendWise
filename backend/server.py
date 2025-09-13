@@ -825,26 +825,31 @@ async def get_expense_stats(
 
 @api_router.put("/expenses/{expense_id}", response_model=Expense)
 async def update_expense(expense_id: str, expense_data: ExpenseUpdate, user: User = Depends(require_auth)):
-    """Update an existing expense"""
+    """Update an existing expense (if user has edit access)"""
     try:
         logging.info(f"Updating expense {expense_id} for user {user.email}: {expense_data.dict()}")
         
-        # Check if expense exists and belongs to user
-        existing_expense = await db.expenses.find_one({"id": expense_id, "user_id": user.id})
+        # Check if user has edit access to this expense
+        has_access = await check_expense_access(expense_id, user, "edit")
+        if not has_access:
+            raise HTTPException(status_code=403, detail="You don't have edit access to this expense")
+        
+        # Get the expense
+        existing_expense = await db.expenses.find_one({"id": expense_id})
         if not existing_expense:
             raise HTTPException(status_code=404, detail="Expense not found")
         
         # Parse existing expense
         existing_expense = parse_from_mongo(existing_expense)
         
-        # Update fields
+        # Update fields (keep original user_id and other metadata)
         updated_expense = Expense(
             id=expense_id,
             amount=expense_data.amount,
             category=expense_data.category,
             description=expense_data.description,
             date=expense_data.date,
-            user_id=user.id,
+            user_id=existing_expense.get("user_id"),  # Keep original owner
             is_shared=existing_expense.get("is_shared", False),
             created_at=existing_expense.get("created_at", datetime.now(timezone.utc))
         )
@@ -852,11 +857,11 @@ async def update_expense(expense_id: str, expense_data: ExpenseUpdate, user: Use
         # Update in database
         expense_dict = prepare_for_mongo(updated_expense.dict())
         await db.expenses.update_one(
-            {"id": expense_id, "user_id": user.id},
+            {"id": expense_id},
             {"$set": expense_dict}
         )
         
-        logging.info(f"Expense {expense_id} updated successfully")
+        logging.info(f"Expense {expense_id} updated successfully by {user.email}")
         return updated_expense
         
     except HTTPException:

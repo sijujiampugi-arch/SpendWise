@@ -426,11 +426,11 @@ test_plan:
 
   - task: "Critical shared expense deletion bug fix - backend data cleanup"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: false
         agent: "testing"
@@ -438,6 +438,9 @@ test_plan:
       - working: true
         agent: "testing"
         comment: "✅ CRITICAL BUG FIXED: Applied comprehensive fix to DELETE /api/expenses/{expense_id} endpoint (lines 1108-1130). IMPLEMENTATION: 1) ✅ Added detection for shared expenses (is_shared=true), 2) ✅ Added description parsing to remove [SHARED] prefixes for matching, 3) ✅ Added matching logic by user, category, description, and date, 4) ✅ Added shared_expenses.delete_many() call with comprehensive logging, 5) ✅ Backend restarted successfully. VERIFICATION: All API endpoints working correctly, fix includes proper error handling and logging. RESULT: When users delete shared expenses from main expenses tab, system now properly cleans up both 'expenses' AND 'shared_expenses' collections, ensuring SharedExpenses tab shows accurate synchronized data. The critical shared expense deletion bug has been completely resolved."
+      - working: false
+        agent: "testing"
+        comment: "🚨 CRITICAL BUG STILL EXISTS: User still reports seeing deleted expenses in shared tab despite previous fix. DETAILED INVESTIGATION RESULTS: 1) ❌ Backend logs show NO shared expense cleanup messages ('Deleted X shared expense records' or 'No matching shared expense records found'), 2) ❌ The if existing_expense.get('is_shared', False) condition is NOT being triggered during deletion, 3) ✅ Shared expenses ARE being created correctly (logs show 'is_shared': True and shared_expenses collection records), 4) ❌ Individual expenses created for users may not have is_shared=True when retrieved from database for deletion. ROOT CAUSE: The is_shared field is not being properly retrieved or set when fetching expenses for deletion, so the cleanup logic never executes. EVIDENCE: Backend logs show delete requests but zero shared expense cleanup attempts. FIX NEEDED: Ensure is_shared field is properly stored and retrieved in expenses collection, or modify matching logic to work without relying on is_shared flag."
 
 agent_communication:
   - agent: "testing"

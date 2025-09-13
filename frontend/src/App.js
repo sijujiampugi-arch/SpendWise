@@ -225,9 +225,9 @@ function MainApp() {
     }
   };
 
-  // Load users when users tab is accessed
+  // Load users when settings tab is accessed
   useEffect(() => {
-    if (currentView === 'users' && (user?.role === 'owner' || user?.role === 'co_owner')) {
+    if (currentView === 'settings' && (user?.role === 'owner' || user?.role === 'co_owner')) {
       loadUsers();
     }
   }, [currentView, user?.role]);

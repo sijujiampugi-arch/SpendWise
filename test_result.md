@@ -261,10 +261,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Mobile responsiveness and delete button functionality"
+    - "Spreadsheet import functionality (CSV/Excel)"
   stuck_tasks: []
   test_all: false
-  test_priority: "mobile_fixes_complete"
+  test_priority: "import_functionality_analysis_complete"
 
   - task: "Spreadsheet import functionality (CSV/Excel)"
     implemented: true

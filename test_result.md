@@ -273,6 +273,13 @@ test_plan:
     stuck_count: 1
     priority: "high"
     needs_retesting: false
+  - task: "Share button visibility and functionality"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"

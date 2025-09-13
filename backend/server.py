@@ -791,20 +791,27 @@ async def get_settlements(user: User = Depends(require_auth)):
 async def preview_import(file: UploadFile = File(...), user: User = Depends(require_auth)):
     """Preview spreadsheet import with smart column detection"""
     try:
+        logging.info(f"Import preview requested by user {user.email} for file: {file.filename}")
+        
         if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
             raise HTTPException(status_code=400, detail="Only CSV and Excel files are supported")
         
         # Read file content
         file_content = await file.read()
+        logging.info(f"File content size: {len(file_content)} bytes")
         
         # Parse file based on extension
         if file.filename.endswith('.csv'):
             df = pd.read_csv(io.BytesIO(file_content))
+            logging.info("File parsed as CSV")
         else:
             df = pd.read_excel(io.BytesIO(file_content))
+            logging.info("File parsed as Excel")
         
         if df.empty:
             raise HTTPException(status_code=400, detail="File is empty")
+        
+        logging.info(f"DataFrame shape: {df.shape}, columns: {list(df.columns)}")
         
         # Smart column detection
         detected_columns = {}
@@ -820,6 +827,8 @@ async def preview_import(file: UploadFile = File(...), user: User = Depends(requ
                 if any(possible in col_name.lower() for possible in possible_names):
                     detected_columns[required_field] = col_name
                     break
+        
+        logging.info(f"Detected columns: {detected_columns}")
         
         # Get preview data (first 5 rows)
         preview_data = df.head(5).fillna('').to_dict('records')
@@ -840,16 +849,23 @@ async def preview_import(file: UploadFile = File(...), user: User = Depends(requ
             if field not in detected_columns:
                 import_stats['missing_required'].append(field)
         
-        return ImportPreview(
+        logging.info(f"Import stats: {import_stats}")
+        
+        result = ImportPreview(
             total_rows=len(df),
             preview_data=preview_data,
             detected_columns=detected_columns,
             import_stats=import_stats
         )
         
+        logging.info("Import preview created successfully")
+        return result
+        
     except pd.errors.EmptyDataError:
+        logging.error("Empty data error during import preview")
         raise HTTPException(status_code=400, detail="File is empty or corrupted")
     except Exception as e:
+        logging.error(f"Error processing import preview: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=f"Error processing file: {str(e)}")
 
 @api_router.post("/import/execute")

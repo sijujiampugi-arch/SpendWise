@@ -971,6 +971,10 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
       setExpenseShares({ ...expenseShares, [expenseId]: response.data.shares });
       
       setShareFormData({ email: '', permission: 'view' });
+      
+      // Refresh all data to sync Shared expenses tab
+      onExpenseDeleted();
+      
       alert('Expense shared successfully!');
     } catch (error) {
       console.error('Error sharing expense:', error);

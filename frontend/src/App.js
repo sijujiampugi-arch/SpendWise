@@ -1067,6 +1067,7 @@ const ImportManager = ({ categories, onImportComplete }) => {
   const [columnMapping, setColumnMapping] = useState({});
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [uploadingPreview, setUploadingPreview] = useState(false);
 
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];

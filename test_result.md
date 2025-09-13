@@ -261,10 +261,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Spreadsheet import functionality (CSV/Excel) - PYDANTIC FIX VERIFIED"
+    - "Share button visibility and functionality"
   stuck_tasks: []
   test_all: false
-  test_priority: "pydantic_validation_fix_confirmed"
+  test_priority: "share_button_investigation"
 
   - task: "Spreadsheet import functionality (CSV/Excel)"
     implemented: true

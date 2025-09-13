@@ -426,11 +426,11 @@ test_plan:
 
   - task: "Critical shared expense deletion bug fix - backend data cleanup"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "testing"

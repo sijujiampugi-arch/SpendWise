@@ -618,7 +618,7 @@ body {
   align-items: center;
 }
 
-.edit-button {
+.edit-button, .share-button {
   background: var(--accent-blue);
   color: white;
   border: none;
@@ -636,10 +636,217 @@ body {
   touch-action: manipulation;
 }
 
+.share-button {
+  background: var(--accent-green);
+}
+
 .edit-button:hover {
   opacity: 1;
   transform: scale(1.05);
   background: #0056b3;
+}
+
+.share-button:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  background: #28a745;
+}
+
+/* Expense badges */
+.expense-badges {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.shared-badge, .shared-with-me-badge, .owner-badge {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  display: inline-block;
+}
+
+.shared-badge {
+  background: var(--accent-blue);
+  color: white;
+}
+
+.shared-with-me-badge {
+  background: var(--accent-green);
+  color: white;
+}
+
+.owner-badge {
+  background: var(--accent-orange);
+  color: white;
+}
+
+/* Shared expense item styling */
+.expense-item.shared-with-me {
+  border-left: 4px solid var(--accent-green);
+  background: rgba(52, 199, 89, 0.05);
+}
+
+/* Share Form Styles */
+.expense-share-form {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 2px solid var(--accent-green);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+}
+
+.share-form-header {
+  margin-bottom: var(--spacing-md);
+}
+
+.share-form-header h4 {
+  color: var(--accent-green);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin: 0;
+}
+
+.share-form-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.share-form-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--spacing-md);
+  align-items: end;
+}
+
+.share-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.share-form-group label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.share-form-input, .share-form-select {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.share-form-input:focus, .share-form-select:focus {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.1);
+}
+
+.share-form-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+  margin-top: var(--spacing-sm);
+}
+
+.save-share-button, .cancel-share-button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.save-share-button {
+  background: var(--accent-green);
+  color: white;
+}
+
+.save-share-button:hover {
+  background: #28a745;
+  transform: translateY(-1px);
+}
+
+.cancel-share-button {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.cancel-share-button:hover {
+  background: var(--border-color);
+}
+
+/* Existing shares */
+.existing-shares {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.existing-shares h5 {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.share-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.share-email {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.share-permission {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+}
+
+.remove-share-button {
+  background: var(--accent-red);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.remove-share-button:hover {
+  background: #dc3545;
+  transform: scale(1.1);
 }
 
 .delete-button {

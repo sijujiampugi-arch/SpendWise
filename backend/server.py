@@ -1005,8 +1005,8 @@ async def get_expense_stats(
             else:
                 trend_end = f"{trend_year}-{trend_month + 1:02d}-01"
             
+            # FULL VISIBILITY: Show trend data for ALL expenses
             trend_filter = {
-                "user_id": user.id,
                 "date": {"$gte": trend_start, "$lt": trend_end}
             }
             

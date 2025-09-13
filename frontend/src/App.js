@@ -154,9 +154,15 @@ function MainApp() {
   useEffect(() => {
     if (user) {
       loadData();
-      loadCategories(); // Load categories whenever user changes
     }
-  }, [user, selectedMonth, selectedYear, loadCategories]);
+  }, [user, selectedMonth, selectedYear]);
+  
+  // Load categories when user changes
+  useEffect(() => {
+    if (user) {
+      loadCategories();
+    }
+  }, [user, loadCategories]);
 
   const loadData = async () => {
     setLoading(true);

@@ -734,7 +734,7 @@ async def create_custom_category(category_data: CustomCategoryCreate, user: User
         custom_category = CustomCategory(
             name=category_data.name,
             color=category_data.color,
-            icon=category_data.icon,
+            emoji=category_data.emoji,
             created_by=user.id,
             is_system=False
         )

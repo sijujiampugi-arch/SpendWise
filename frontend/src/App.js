@@ -370,7 +370,11 @@ function MainApp() {
                 <ExpensesList expenses={expenses} categories={categories} onExpenseDeleted={loadData} />
               )}
               {currentView === 'shared' && (
-                <SharedExpenses user={user} onExpenseAdded={loadData} />
+                <SharedExpenses 
+                  user={user} 
+                  onExpenseAdded={loadData}
+                  refreshTrigger={selectedMonth + '-' + selectedYear + '-' + expenses.length}
+                />
               )}
               {currentView === 'categories' && (
                 <CategoriesManager categories={categories} onCategoryAdded={loadData} />

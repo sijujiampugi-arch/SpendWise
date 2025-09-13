@@ -1259,15 +1259,11 @@ const SharedExpenses = ({ user, onExpenseAdded, refreshTrigger }) => {
     }
   }, [refreshTrigger]);
 
-  // Also refresh when this component becomes active (tab switching)
+  // Refresh when component becomes visible (tab switching)
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Refresh every 30 seconds to catch any missed updates
-      loadSharedData();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+    console.log('SharedExpenses: Component mounted or refreshed');
+    loadSharedData();
+  }, [user]);
 
   const loadSharedData = async () => {
     setLoading(true);

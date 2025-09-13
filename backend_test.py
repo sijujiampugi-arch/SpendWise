@@ -1433,6 +1433,9 @@ class BackendTester:
         self.test_auth_logout_functionality()
         self.test_protected_endpoints_without_auth()
         
+        # Run EDIT/DELETE functionality tests (main focus)
+        self.test_edit_delete_functionality_after_full_visibility()
+        
         # Run FULL VISIBILITY focused tests
         self.test_full_visibility_implementation()
         

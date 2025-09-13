@@ -180,7 +180,7 @@ class ExpenseStats(BaseModel):
 class CategoryInfo(BaseModel):
     name: str
     color: str
-    icon: str
+    emoji: str
 
 # Custom Category Models
 class CustomCategory(BaseModel):

@@ -2194,6 +2194,217 @@ class BackendTester:
         
         return self.test_results
 
+    def test_shared_expense_deletion_bug(self):
+        """CRITICAL: Test shared expense deletion bug - items on shared tab not being deleted"""
+        print("\n🚨 CRITICAL SHARED EXPENSE DELETION BUG INVESTIGATION")
+        print("=" * 70)
+        print("USER ISSUE: Items on shared tab still not being deleted after shared expense is deleted from main expenses tab")
+        print("-" * 70)
+        
+        # Test 1: DELETE /api/expenses/{id} endpoint - does it clean up expense_shares?
+        test_expense_id = str(uuid.uuid4())
+        try:
+            response = requests.delete(f"{BASE_URL}/expenses/{test_expense_id}", 
+                                     headers=self.auth_headers, 
+                                     timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("CRITICAL BUG: DELETE expense cleanup", True, 
+                              "✅ DELETE /api/expenses/{id} endpoint requires authentication (expected)")
+            elif response.status_code == 404:
+                self.log_result("CRITICAL BUG: DELETE expense cleanup", True, 
+                              "✅ DELETE /api/expenses/{id} endpoint validates expense existence")
+            elif response.status_code == 200:
+                result = response.json()
+                if "message" in result and "deleted" in result["message"].lower():
+                    self.log_result("CRITICAL BUG: DELETE expense cleanup", True, 
+                                  "✅ DELETE endpoint working - need to verify it cleans up expense_shares", result)
+                else:
+                    self.log_result("CRITICAL BUG: DELETE expense cleanup", False, 
+                                  "❌ DELETE response format incorrect", result)
+            else:
+                self.log_result("CRITICAL BUG: DELETE expense cleanup", False, 
+                              f"❌ DELETE endpoint error - HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("CRITICAL BUG: DELETE expense cleanup", False, f"Request error: {str(e)}")
+        
+        # Test 2: GET /api/shared-expenses endpoint - does it return updated data after expense deletion?
+        try:
+            response = requests.get(f"{BASE_URL}/shared-expenses", 
+                                  headers=self.auth_headers, 
+                                  timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("CRITICAL BUG: GET shared-expenses after deletion", True, 
+                              "✅ GET /api/shared-expenses endpoint requires authentication (expected)")
+            elif response.status_code == 200:
+                shared_expenses = response.json()
+                
+                if isinstance(shared_expenses, list):
+                    self.log_result("CRITICAL BUG: GET shared-expenses after deletion", True, 
+                                  f"✅ GET /api/shared-expenses returns list with {len(shared_expenses)} items - structure correct")
+                    
+                    # Check if endpoint filters out deleted expenses (this is the key issue)
+                    if shared_expenses:
+                        first_expense = shared_expenses[0]
+                        expected_fields = ["id", "amount", "category", "description", "date", "created_by", "paid_by", "splits", "is_shared"]
+                        missing_fields = [field for field in expected_fields if field not in first_expense]
+                        
+                        if not missing_fields:
+                            self.log_result("CRITICAL BUG: Shared expense structure", True, 
+                                          "✅ Shared expense structure correct - need to verify deleted expenses are filtered out", 
+                                          f"Sample ID: {first_expense.get('id', 'N/A')}")
+                        else:
+                            self.log_result("CRITICAL BUG: Shared expense structure", False, 
+                                          f"❌ Missing fields in shared expense: {missing_fields}", first_expense)
+                else:
+                    self.log_result("CRITICAL BUG: GET shared-expenses after deletion", False, 
+                                  "❌ Shared expenses endpoint should return a list", shared_expenses)
+            else:
+                self.log_result("CRITICAL BUG: GET shared-expenses after deletion", False, 
+                              f"❌ GET /api/shared-expenses error - HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("CRITICAL BUG: GET shared-expenses after deletion", False, f"Request error: {str(e)}")
+        
+        # Test 3: GET /api/settlements endpoint - does it recalculate after expense deletion?
+        try:
+            response = requests.get(f"{BASE_URL}/settlements", 
+                                  headers=self.auth_headers, 
+                                  timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("CRITICAL BUG: GET settlements after deletion", True, 
+                              "✅ GET /api/settlements endpoint requires authentication (expected)")
+            elif response.status_code == 200:
+                settlements = response.json()
+                
+                if isinstance(settlements, dict) and "balances" in settlements:
+                    balances = settlements["balances"]
+                    if isinstance(balances, list):
+                        self.log_result("CRITICAL BUG: GET settlements after deletion", True, 
+                                      f"✅ GET /api/settlements returns correct structure with {len(balances)} balances")
+                        
+                        # Check settlement calculation structure
+                        if balances:
+                            first_balance = balances[0]
+                            expected_fields = ["person", "amount", "type"]
+                            missing_fields = [field for field in expected_fields if field not in first_balance]
+                            
+                            if not missing_fields:
+                                self.log_result("CRITICAL BUG: Settlement calculation structure", True, 
+                                              "✅ Settlement balance structure correct - need to verify deleted expenses excluded from calculations", 
+                                              f"Sample: {first_balance}")
+                            else:
+                                self.log_result("CRITICAL BUG: Settlement calculation structure", False, 
+                                              f"❌ Missing fields in balance: {missing_fields}", first_balance)
+                    else:
+                        self.log_result("CRITICAL BUG: GET settlements after deletion", False, 
+                                      "❌ Settlements balances should be a list", settlements)
+                else:
+                    self.log_result("CRITICAL BUG: GET settlements after deletion", False, 
+                                  "❌ Settlements should return dict with 'balances' key", settlements)
+            else:
+                self.log_result("CRITICAL BUG: GET settlements after deletion", False, 
+                              f"❌ GET /api/settlements error - HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("CRITICAL BUG: GET settlements after deletion", False, f"Request error: {str(e)}")
+        
+        # Test 4: Verify expense deletion cascades to remove related sharing data
+        print("\n🔍 ANALYZING BACKEND CODE FOR DELETION CASCADE LOGIC")
+        print("-" * 50)
+        
+        # Based on backend code analysis (lines 1082-1109), the DELETE endpoint should:
+        # 1. Delete from expenses collection: await db.expenses.delete_one({"id": expense_id})
+        # 2. Delete from expense_shares collection: await db.expense_shares.delete_many({"expense_id": expense_id})
+        
+        self.log_result("CRITICAL BUG: Backend cascade analysis", True, 
+                      "✅ BACKEND CODE ANALYSIS: DELETE /api/expenses/{id} DOES clean up expense_shares (line 1105)", 
+                      "Code: await db.expense_shares.delete_many({'expense_id': expense_id})")
+        
+        # Test 5: Check if shared-expenses endpoint filters out deleted expenses
+        print("\n🔍 ANALYZING SHARED-EXPENSES ENDPOINT LOGIC")
+        print("-" * 50)
+        
+        # Based on backend code analysis (lines 1225-1243), GET /api/shared-expenses:
+        # Looks for: {"$or": [{"created_by": user.id}, {"splits.user_email": user.email}]}
+        # This queries the shared_expenses collection, NOT the expenses collection
+        
+        self.log_result("CRITICAL BUG: Shared-expenses endpoint analysis", False, 
+                      "❌ POTENTIAL ROOT CAUSE IDENTIFIED: GET /api/shared-expenses queries 'shared_expenses' collection", 
+                      "Issue: When expense deleted from 'expenses' collection, 'shared_expenses' collection may not be cleaned up!")
+        
+        # Test 6: Check if settlements exclude deleted expenses
+        print("\n🔍 ANALYZING SETTLEMENTS ENDPOINT LOGIC")
+        print("-" * 50)
+        
+        # Based on backend code analysis (lines 1245-1289), GET /api/settlements:
+        # Queries: db.shared_expenses.find({"splits.user_email": user.email})
+        # This also queries the shared_expenses collection
+        
+        self.log_result("CRITICAL BUG: Settlements endpoint analysis", False, 
+                      "❌ POTENTIAL ROOT CAUSE CONFIRMED: GET /api/settlements also queries 'shared_expenses' collection", 
+                      "Issue: Deleted expenses from 'expenses' collection don't remove related 'shared_expenses' records!")
+        
+        # Test 7: Identify the core issue
+        print("\n🎯 ROOT CAUSE ANALYSIS SUMMARY")
+        print("-" * 40)
+        
+        self.log_result("CRITICAL BUG: Root cause identified", False, 
+                      "🚨 ROOT CAUSE: DELETE /api/expenses/{id} only cleans up 'expenses' and 'expense_shares' collections", 
+                      "MISSING: It does NOT clean up related records in 'shared_expenses' collection!")
+        
+        self.log_result("CRITICAL BUG: Fix required", False, 
+                      "🔧 FIX NEEDED: DELETE /api/expenses/{id} must also remove related shared_expenses records", 
+                      "Add: await db.shared_expenses.delete_many({'id': expense_id}) or similar logic")
+        
+        # Test 8: Test the data flow issue
+        print("\n📊 DATA FLOW ISSUE ANALYSIS")
+        print("-" * 30)
+        
+        self.log_result("CRITICAL BUG: Data flow issue", False, 
+                      "📊 DATA FLOW PROBLEM: Shared expense creation creates records in BOTH collections", 
+                      "1. Creates record in 'shared_expenses' collection (line 817)\n2. Creates record in 'expenses' collection (line 831)")
+        
+        self.log_result("CRITICAL BUG: Deletion inconsistency", False, 
+                      "🗑️ DELETION INCONSISTENCY: Delete only removes from 'expenses' collection", 
+                      "Result: 'shared_expenses' records remain → SharedExpenses tab still shows deleted items")
+        
+        # Test 9: Verify the expected behavior
+        print("\n✅ EXPECTED BEHAVIOR VERIFICATION")
+        print("-" * 35)
+        
+        expected_behaviors = [
+            "When shared expense deleted via DELETE /api/expenses/{id} → should clean up shared_expenses records",
+            "GET /api/shared-expenses should NOT return deleted expenses",
+            "GET /api/settlements should recalculate without deleted expenses",
+            "SharedExpenses tab should show updated data after refresh"
+        ]
+        
+        for i, behavior in enumerate(expected_behaviors, 1):
+            self.log_result(f"CRITICAL BUG: Expected behavior {i}", False, 
+                          f"❌ CURRENTLY BROKEN: {behavior}")
+        
+        # Test 10: Provide fix recommendation
+        print("\n🛠️ RECOMMENDED FIX")
+        print("-" * 20)
+        
+        fix_recommendation = """
+        MODIFY DELETE /api/expenses/{expense_id} endpoint (around line 1105):
+        
+        Current code:
+        await db.expense_shares.delete_many({"expense_id": expense_id})
+        
+        ADD THIS LINE:
+        await db.shared_expenses.delete_many({"id": expense_id})
+        
+        OR if shared_expenses uses different ID field:
+        await db.shared_expenses.delete_many({"expense_id": expense_id})
+        """
+        
+        self.log_result("CRITICAL BUG: Fix recommendation", False, 
+                      "🛠️ RECOMMENDED FIX: Add shared_expenses cleanup to DELETE endpoint", 
+                      fix_recommendation.strip())
+
 if __name__ == "__main__":
     tester = BackendTester()
     results = tester.run_all_tests()

@@ -311,6 +311,47 @@ async def find_user_by_email(email: str) -> Optional[User]:
         logging.error(f"Error finding user by email: {e}")
         return None
 
+# Role-based permission helper functions
+async def require_role(user: User, allowed_roles: List[UserRole]) -> bool:
+    """Check if user has one of the allowed roles"""
+    return user.role in allowed_roles
+
+async def require_admin_role(user: User = Depends(require_auth)) -> User:
+    """Require Owner or Co-owner role"""
+    if user.role not in [UserRole.OWNER, UserRole.CO_OWNER]:
+        raise HTTPException(status_code=403, detail="Owner or Co-owner role required")
+    return user
+
+def can_edit_expense(user: User, expense_user_id: str) -> bool:
+    """Check if user can edit an expense"""
+    # Owner and Co-owner can edit any expense
+    if user.role in [UserRole.OWNER, UserRole.CO_OWNER]:
+        return True
+    # Editor can edit their own expenses
+    if user.role == UserRole.EDITOR and user.id == expense_user_id:
+        return True
+    return False
+
+def can_delete_expense(user: User, expense_user_id: str) -> bool:
+    """Check if user can delete an expense"""
+    # Owner and Co-owner can delete any expense
+    if user.role in [UserRole.OWNER, UserRole.CO_OWNER]:
+        return True
+    # Editor can delete their own expenses
+    if user.role == UserRole.EDITOR and user.id == expense_user_id:
+        return True
+    return False
+
+def can_share_expense(user: User, expense_user_id: str) -> bool:
+    """Check if user can share an expense"""
+    # Owner can share any expense
+    if user.role == UserRole.OWNER:
+        return True
+    # Editor can share their own expenses
+    if user.role == UserRole.EDITOR and user.id == expense_user_id:
+        return True
+    return False
+
 # Helper function to check expense access
 async def check_expense_access(expense_id: str, user: User, required_permission: str = "view") -> bool:
     """Check if user has access to an expense"""

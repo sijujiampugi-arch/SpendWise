@@ -972,7 +972,7 @@ body {
   }
 
   /* Make delete button more accessible on mobile */
-  .delete-button {
+  .delete-button, .edit-button {
     min-width: 44px;
     min-height: 44px;
     padding: var(--spacing-sm);
@@ -982,15 +982,23 @@ body {
     align-items: center;
     justify-content: center;
     opacity: 1;
-    background: var(--accent-red);
-    color: white;
-    border: 2px solid var(--accent-red);
+    border: 2px solid transparent;
     touch-action: manipulation;
   }
 
-  .delete-button:hover {
-    background: #dc3545;
-    border-color: #dc3545;
+  .edit-button {
+    background: var(--accent-blue);
+    color: white;
+    border-color: var(--accent-blue);
+  }
+
+  .delete-button {
+    background: var(--accent-red);
+    color: white;
+    border-color: var(--accent-red);
+  }
+
+  .delete-button:hover, .edit-button:hover {
     transform: none; /* Remove transform on mobile for better performance */
   }
 
@@ -998,6 +1006,32 @@ body {
     background: #bd2130;
     border-color: #bd2130;
     transform: scale(0.95);
+  }
+
+  .edit-button:active {
+    background: #0056b3;
+    border-color: #0056b3;
+    transform: scale(0.95);
+  }
+
+  /* Edit form mobile styles */
+  .edit-form-row {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .edit-form-actions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .save-edit-button, .cancel-edit-button {
+    width: 100%;
+    padding: var(--spacing-md);
+  }
+
+  .expense-actions {
+    gap: var(--spacing-sm);
   }
 
   .form-row {

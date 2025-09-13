@@ -1956,6 +1956,7 @@ class BackendTester:
         # Run ROLE-BASED ACCESS CONTROL tests (main focus for this review)
         print("\n👑 ROLE-BASED ACCESS CONTROL TESTS")
         print("-" * 40)
+        self.test_owner_role_assignment_for_specific_email()  # NEW: Priority test for specific email
         self.test_user_management_endpoints()
         self.test_role_based_expense_permissions()
         self.test_expense_permission_matrix()

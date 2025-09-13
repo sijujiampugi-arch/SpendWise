@@ -294,10 +294,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Role-based access control system implementation"
+    - "Owner role assignment for specific email 'sijujiampugi@gmail.com'"
   stuck_tasks: []
   test_all: false
-  test_priority: "rbac_verification_complete"
+  test_priority: "owner_role_assignment_complete"
 
   - task: "Spreadsheet import functionality (CSV/Excel)"
     implemented: true

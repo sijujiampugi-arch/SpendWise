@@ -294,60 +294,6 @@ function MainApp() {
     }
   };
 
-  // Category management functions
-  const loadCategories = useCallback(async () => {
-    setCategoryLoading(true);
-    try {
-      const [categoriesRes, colorsRes] = await Promise.all([
-        axios.get(`${API}/categories`, { withCredentials: true }),
-        axios.get(`${API}/categories/colors`, { withCredentials: true })
-      ]);
-      setAllCategories(categoriesRes.data);
-      setColorPalette(colorsRes.data.colors);
-    } catch (error) {
-      console.error('Error loading categories:', error);
-      alert(error.response?.data?.detail || 'Error loading categories');
-    }
-    setCategoryLoading(false);
-  }, []);
-
-  const createCategory = async (categoryData) => {
-    try {
-      await axios.post(`${API}/categories`, categoryData, { withCredentials: true });
-      alert('Category created successfully!');
-      loadCategories(); // Refresh categories list
-    } catch (error) {
-      console.error('Error creating category:', error);
-      alert(error.response?.data?.detail || 'Error creating category');
-    }
-  };
-
-  const updateCategory = async (categoryId, categoryData) => {
-    try {
-      await axios.put(`${API}/categories/${categoryId}`, categoryData, { withCredentials: true });
-      alert('Category updated successfully!');
-      loadCategories(); // Refresh categories list
-    } catch (error) {
-      console.error('Error updating category:', error);
-      alert(error.response?.data?.detail || 'Error updating category');
-    }
-  };
-
-  const deleteCategory = async (categoryId) => {
-    if (!window.confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
-      return;
-    }
-    
-    try {
-      await axios.delete(`${API}/categories/${categoryId}`, { withCredentials: true });
-      alert('Category deleted successfully!');
-      loadCategories(); // Refresh categories list
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      alert(error.response?.data?.detail || 'Error deleting category');
-    }
-  };
-
   // Load users when settings tab is accessed
   useEffect(() => {
     if (currentView === 'settings' && (user?.role === 'owner' || user?.role === 'co_owner')) {

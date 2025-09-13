@@ -483,14 +483,20 @@ async def process_session_data(request: Request):
         existing_user = await db.users.find_one({"email": session_data["email"]})
         
         if not existing_user:
+            # Check if this is the first user (should be Owner)
+            user_count = await db.users.count_documents({})
+            
             # Create new user
             new_user = User(
                 email=session_data["email"],
                 name=session_data["name"],
-                picture=session_data["picture"]
+                picture=session_data["picture"],
+                role=UserRole.OWNER if user_count == 0 else UserRole.VIEWER  # First user becomes Owner
             )
             await db.users.insert_one(prepare_for_mongo(new_user.dict()))
             user_id = new_user.id
+            
+            logging.info(f"Created new user {session_data['email']} with role {new_user.role} (user count was {user_count})")
         else:
             user_id = existing_user["id"]
         

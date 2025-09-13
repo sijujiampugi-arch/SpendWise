@@ -2278,6 +2278,7 @@ class BackendTester:
         self.setup_mock_authentication()
         
         # CRITICAL BUG TEST FIRST - Shared Expense Deletion Issue
+        self.test_critical_shared_expense_deletion_bug()
         self.test_shared_expense_deletion_bug()
         
         # CRITICAL BUG TEST - Owner Delete Issue

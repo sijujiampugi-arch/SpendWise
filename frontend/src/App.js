@@ -952,7 +952,7 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
       ) : (
         <div className="expenses-grid">
           {expenses.map(expense => (
-            <div key={expense.id} className="expense-item">
+            <div key={expense.id} className={`expense-item ${expense.is_shared_with_me ? 'shared-with-me' : ''}`}>
               {editingExpense === expense.id ? (
                 // Edit Mode
                 <div className="expense-edit-form">
@@ -1022,6 +1022,73 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
                     </div>
                   </div>
                 </div>
+              ) : sharingExpense === expense.id ? (
+                // Share Mode
+                <div className="expense-share-form">
+                  <div className="share-form-header">
+                    <h4>👥 Share Expense</h4>
+                  </div>
+                  <div className="share-form-content">
+                    <div className="share-form-row">
+                      <div className="share-form-group">
+                        <label>Email Address</label>
+                        <input
+                          type="email"
+                          value={shareFormData.email}
+                          onChange={(e) => setShareFormData({ ...shareFormData, email: e.target.value })}
+                          className="share-form-input"
+                          placeholder="user@example.com"
+                        />
+                      </div>
+                      <div className="share-form-group">
+                        <label>Permission</label>
+                        <select
+                          value={shareFormData.permission}
+                          onChange={(e) => setShareFormData({ ...shareFormData, permission: e.target.value })}
+                          className="share-form-select"
+                        >
+                          <option value="view">👁️ View Only</option>
+                          <option value="edit">✏️ View & Edit</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="share-form-actions">
+                      <button 
+                        onClick={() => handleSaveShare(expense.id)}
+                        className="save-share-button"
+                      >
+                        ➕ Share
+                      </button>
+                      <button 
+                        onClick={handleCancelShare}
+                        className="cancel-share-button"
+                      >
+                        ❌ Cancel
+                      </button>
+                    </div>
+                    
+                    {/* Existing Shares */}
+                    {expenseShares[expense.id] && expenseShares[expense.id].length > 0 && (
+                      <div className="existing-shares">
+                        <h5>Currently Shared With:</h5>
+                        {expenseShares[expense.id].map(share => (
+                          <div key={share.id} className="share-item">
+                            <span className="share-email">{share.shared_with_email}</span>
+                            <span className="share-permission">
+                              {share.permission === 'edit' ? '✏️ Edit' : '👁️ View'}
+                            </span>
+                            <button 
+                              onClick={() => handleRemoveShare(expense.id, share.id)}
+                              className="remove-share-button"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               ) : (
                 // View Mode
                 <>
@@ -1032,25 +1099,46 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
                     <h4>{expense.description}</h4>
                     <p className="expense-category">{expense.category}</p>
                     <p className="expense-date">{new Date(expense.date).toLocaleDateString()}</p>
-                    {expense.is_shared && <span className="shared-badge">👥 Shared</span>}
+                    <div className="expense-badges">
+                      {expense.is_shared && <span className="shared-badge">👥 Shared</span>}
+                      {expense.is_shared_with_me && (
+                        <span className="shared-with-me-badge">
+                          {expense.shared_permission === 'edit' ? '✏️ Can Edit' : '👁️ View Only'}
+                        </span>
+                      )}
+                      {expense.is_owned_by_me && <span className="owner-badge">👑 Owner</span>}
+                    </div>
                   </div>
                   <div className="expense-amount">
                     <span>{formatCurrency(expense.amount)}</span>
                     <div className="expense-actions">
-                      <button 
-                        onClick={() => handleEdit(expense)}
-                        className="edit-button"
-                        title="Edit expense"
-                      >
-                        ✏️
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(expense.id)}
-                        className="delete-button"
-                        title="Delete expense"
-                      >
-                        🗑️
-                      </button>
+                      {canEdit(expense) && (
+                        <button 
+                          onClick={() => handleEdit(expense)}
+                          className="edit-button"
+                          title="Edit expense"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                      {canShare(expense) && (
+                        <button 
+                          onClick={() => handleShare(expense)}
+                          className="share-button"
+                          title="Share expense"
+                        >
+                          👥
+                        </button>
+                      )}
+                      {canDelete(expense) && (
+                        <button 
+                          onClick={() => handleDelete(expense.id)}
+                          className="delete-button"
+                          title="Delete expense"
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
                   </div>
                 </>

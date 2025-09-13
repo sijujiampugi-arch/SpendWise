@@ -1745,6 +1745,13 @@ class BackendTester:
         self.test_auth_logout_functionality()
         self.test_protected_endpoints_without_auth()
         
+        # Run ROLE-BASED ACCESS CONTROL tests (main focus for this review)
+        print("\n👑 ROLE-BASED ACCESS CONTROL TESTS")
+        print("-" * 40)
+        self.test_user_management_endpoints()
+        self.test_role_based_expense_permissions()
+        self.test_expense_permission_matrix()
+        
         # Run EDIT/DELETE functionality tests (main focus)
         self.test_edit_delete_functionality_after_full_visibility()
         

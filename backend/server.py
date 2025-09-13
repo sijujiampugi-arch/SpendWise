@@ -712,23 +712,33 @@ async def get_expenses(
         # Apply limit
         expenses = expenses[:limit]
         
-        # Convert to Expense models
+        # Convert to response format (keep as dicts to preserve additional fields)
         result = []
         for expense in expenses:
             expense_data = parse_from_mongo(expense)
-            expense_obj = Expense(**expense_data)
             
-            # Add additional fields for sharing info
-            if hasattr(expense_obj, '__dict__'):
-                # Always include is_owned_by_me (True or False) for frontend canEdit/canDelete logic
-                expense_obj.__dict__["is_owned_by_me"] = expense.get("is_owned_by_me", False)
-                
-                if expense.get("shared_permission"):
-                    expense_obj.__dict__["shared_permission"] = expense["shared_permission"]
-                if expense.get("is_shared_with_me"):
-                    expense_obj.__dict__["is_shared_with_me"] = True
+            # Create base expense dict with all required fields
+            expense_dict = {
+                "id": expense_data.get("id"),
+                "amount": expense_data.get("amount"),
+                "category": expense_data.get("category"),
+                "description": expense_data.get("description"),
+                "date": expense_data.get("date"),
+                "user_id": expense_data.get("user_id"),
+                "is_shared": expense_data.get("is_shared", False),
+                "created_at": expense_data.get("created_at")
+            }
             
-            result.append(expense_obj)
+            # Add additional fields for sharing info and frontend logic
+            # Always include is_owned_by_me (True or False) for frontend canEdit/canDelete logic
+            expense_dict["is_owned_by_me"] = expense.get("is_owned_by_me", False)
+            
+            if expense.get("shared_permission"):
+                expense_dict["shared_permission"] = expense["shared_permission"]
+            if expense.get("is_shared_with_me"):
+                expense_dict["is_shared_with_me"] = True
+            
+            result.append(expense_dict)
         
         return result
     except Exception as e:

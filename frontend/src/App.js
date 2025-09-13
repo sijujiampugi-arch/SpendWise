@@ -1971,6 +1971,194 @@ const UserManagement = ({ users, availableRoles, onAssignRole, onRemoveUser, loa
   );
 };
 
+// General Settings Component
+const GeneralSettings = () => {
+  const [darkMode, setDarkMode] = useState(false);
+  const [currency, setCurrency] = useState('PHP');
+  const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
+
+  return (
+    <div className="settings-section">
+      <h3>🏠 General Settings</h3>
+      <div className="settings-grid">
+        <div className="setting-item">
+          <label className="setting-label">Theme</label>
+          <div className="setting-control">
+            <select 
+              value={darkMode ? 'dark' : 'light'} 
+              onChange={(e) => setDarkMode(e.target.value === 'dark')}
+              className="setting-select"
+            >
+              <option value="light">🌞 Light Mode</option>
+              <option value="dark">🌙 Dark Mode</option>
+            </select>
+          </div>
+          <p className="setting-description">Choose your preferred theme</p>
+        </div>
+
+        <div className="setting-item">
+          <label className="setting-label">Currency</label>
+          <div className="setting-control">
+            <select 
+              value={currency} 
+              onChange={(e) => setCurrency(e.target.value)}
+              className="setting-select"
+            >
+              <option value="PHP">🇵🇭 Philippine Peso (₱)</option>
+              <option value="USD">🇺🇸 US Dollar ($)</option>
+              <option value="EUR">🇪🇺 Euro (€)</option>
+              <option value="GBP">🇬🇧 British Pound (£)</option>
+            </select>
+          </div>
+          <p className="setting-description">Default currency for new expenses</p>
+        </div>
+
+        <div className="setting-item">
+          <label className="setting-label">Date Format</label>
+          <div className="setting-control">
+            <select 
+              value={dateFormat} 
+              onChange={(e) => setDateFormat(e.target.value)}
+              className="setting-select"
+            >
+              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+            </select>
+          </div>
+          <p className="setting-description">How dates are displayed throughout the app</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Profile Settings Component
+const ProfileSettings = ({ user }) => {
+  return (
+    <div className="settings-section">
+      <h3>👤 Profile Settings</h3>
+      <div className="profile-card">
+        <div className="profile-info">
+          <img src={user?.picture} alt={user?.name} className="profile-avatar" />
+          <div className="profile-details">
+            <h4>{user?.name}</h4>
+            <p className="profile-email">{user?.email}</p>
+            <span className={`profile-role-badge role-${user?.role}`}>
+              {user?.role === 'owner' && '👑 Owner'}
+              {user?.role === 'co_owner' && '🤝 Co-owner'}
+              {user?.role === 'editor' && '✏️ Editor'}
+              {user?.role === 'viewer' && '👁️ Viewer'}
+            </span>
+          </div>
+        </div>
+        
+        <div className="profile-stats">
+          <div className="stat-item">
+            <span className="stat-label">Role</span>
+            <span className="stat-value">{user?.role?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Member Since</span>
+            <span className="stat-value">{user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</span>
+          </div>
+        </div>
+
+        <div className="profile-permissions">
+          <h5>Your Permissions</h5>
+          <div className="permissions-list">
+            <div className="permission-item">
+              <span className="permission-icon">👁️</span>
+              <span>View all expenses</span>
+            </div>
+            {(user?.role === 'editor' || user?.role === 'owner' || user?.role === 'co_owner') && (
+              <div className="permission-item">
+                <span className="permission-icon">✏️</span>
+                <span>{user?.role === 'editor' ? 'Edit your own expenses' : 'Edit any expense'}</span>
+              </div>
+            )}
+            {(user?.role === 'editor' || user?.role === 'owner' || user?.role === 'co_owner') && (
+              <div className="permission-item">
+                <span className="permission-icon">🗑️</span>
+                <span>{user?.role === 'editor' ? 'Delete your own expenses' : 'Delete any expense'}</span>
+              </div>
+            )}
+            {(user?.role === 'editor' || user?.role === 'owner') && (
+              <div className="permission-item">
+                <span className="permission-icon">👥</span>
+                <span>{user?.role === 'editor' ? 'Share your own expenses' : 'Share any expense'}</span>
+              </div>
+            )}
+            {(user?.role === 'owner' || user?.role === 'co_owner') && (
+              <div className="permission-item">
+                <span className="permission-icon">⚙️</span>
+                <span>Manage users and system settings</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// About Settings Component
+const AboutSettings = () => {
+  return (
+    <div className="settings-section">
+      <h3>ℹ️ About SpendWise</h3>
+      <div className="about-content">
+        <div className="app-info">
+          <div className="app-logo">
+            <h2>SpendWise</h2>
+            <p>Smart expense tracking</p>
+          </div>
+          
+          <div className="app-details">
+            <div className="detail-item">
+              <span className="detail-label">Version</span>
+              <span className="detail-value">2.0.0</span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Build</span>
+              <span className="detail-value">RBAC-2024</span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Last Updated</span>
+              <span className="detail-value">{new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="features-list">
+          <h4>✨ Features</h4>
+          <ul>
+            <li>📊 Real-time expense tracking and analytics</li>
+            <li>👥 Role-based access control (Owner, Co-owner, Editor, Viewer)</li>
+            <li>🤝 Collaborative expense sharing</li>
+            <li>📄 Spreadsheet import (CSV, Excel)</li>
+            <li>🏷️ Custom categories with emoji picker</li>
+            <li>📱 Mobile-responsive design</li>
+            <li>🔒 Google OAuth authentication</li>
+            <li>🌙 Dark/Light mode support</li>
+          </ul>
+        </div>
+
+        <div className="tech-stack">
+          <h4>🛠️ Tech Stack</h4>
+          <div className="tech-badges">
+            <span className="tech-badge">React</span>
+            <span className="tech-badge">FastAPI</span>
+            <span className="tech-badge">MongoDB</span>
+            <span className="tech-badge">D3.js</span>
+            <span className="tech-badge">Tailwind CSS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>

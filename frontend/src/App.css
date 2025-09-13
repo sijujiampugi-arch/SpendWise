@@ -2586,6 +2586,19 @@ body {
     width: 100%;
   }
 
+  /* Category management mobile responsiveness */
+  .category-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-preview-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-preview-item {
+    justify-content: flex-start;
+  }
+
   /* Settings mobile responsiveness */
   .settings-nav {
     flex-direction: column;

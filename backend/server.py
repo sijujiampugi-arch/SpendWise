@@ -872,13 +872,125 @@ async def update_expense(expense_id: str, expense_data: ExpenseUpdate, user: Use
 
 @api_router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
-    """Delete an expense"""
+    """Delete an expense (only owner can delete)"""
     try:
+        # Only owner can delete (not shared users)
         result = await db.expenses.delete_one({"id": expense_id, "user_id": user.id})
         if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Expense not found")
+            raise HTTPException(status_code=404, detail="Expense not found or you don't have permission to delete it")
+        
+        # Also delete any shares of this expense
+        await db.expense_shares.delete_many({"expense_id": expense_id})
+        
         return {"message": "Expense deleted successfully"}
     except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Expense Sharing Routes
+@api_router.post("/expenses/{expense_id}/share")
+async def share_expense(expense_id: str, share_data: ExpenseShareCreate, user: User = Depends(require_auth)):
+    """Share an expense with another user"""
+    try:
+        logging.info(f"Sharing expense {expense_id} with {share_data.shared_with_email} by {user.email}")
+        
+        # Check if user owns the expense
+        expense = await db.expenses.find_one({"id": expense_id, "user_id": user.id})
+        if not expense:
+            raise HTTPException(status_code=404, detail="Expense not found or you don't have permission to share it")
+        
+        # Validate permission level
+        if share_data.permission not in ["view", "edit"]:
+            raise HTTPException(status_code=400, detail="Permission must be 'view' or 'edit'")
+        
+        # Validate email format
+        if "@" not in share_data.shared_with_email:
+            raise HTTPException(status_code=400, detail="Invalid email address")
+        
+        # Don't allow sharing with self
+        if share_data.shared_with_email == user.email:
+            raise HTTPException(status_code=400, detail="You cannot share an expense with yourself")
+        
+        # Check if already shared with this user
+        existing_share = await db.expense_shares.find_one({
+            "expense_id": expense_id,
+            "shared_with_email": share_data.shared_with_email
+        })
+        
+        if existing_share:
+            # Update existing share
+            await db.expense_shares.update_one(
+                {"id": existing_share["id"]},
+                {"$set": {"permission": share_data.permission}}
+            )
+            message = "Share updated successfully"
+        else:
+            # Create new share
+            expense_share = ExpenseShare(
+                expense_id=expense_id,
+                shared_with_email=share_data.shared_with_email,
+                permission=share_data.permission,
+                shared_by=user.id
+            )
+            await db.expense_shares.insert_one(prepare_for_mongo(expense_share.dict()))
+            message = "Expense shared successfully"
+        
+        logging.info(f"Expense {expense_id} shared with {share_data.shared_with_email}")
+        return {"message": message}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error sharing expense: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.get("/expenses/{expense_id}/shares")
+async def get_expense_shares(expense_id: str, user: User = Depends(require_auth)):
+    """Get all shares for an expense (owner only)"""
+    try:
+        # Check if user owns the expense
+        expense = await db.expenses.find_one({"id": expense_id, "user_id": user.id})
+        if not expense:
+            raise HTTPException(status_code=404, detail="Expense not found or you don't have permission to view shares")
+        
+        shares = await db.expense_shares.find({"expense_id": expense_id}).to_list(length=None)
+        
+        result = []
+        for share in shares:
+            result.append({
+                "id": share["id"],
+                "shared_with_email": share["shared_with_email"],
+                "permission": share["permission"],
+                "created_at": share["created_at"]
+            })
+        
+        return {"shares": result}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error getting expense shares: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.delete("/expenses/{expense_id}/shares/{share_id}")
+async def remove_expense_share(expense_id: str, share_id: str, user: User = Depends(require_auth)):
+    """Remove a share (owner only)"""
+    try:
+        # Check if user owns the expense
+        expense = await db.expenses.find_one({"id": expense_id, "user_id": user.id})
+        if not expense:
+            raise HTTPException(status_code=404, detail="Expense not found or you don't have permission")
+        
+        # Delete the share
+        result = await db.expense_shares.delete_one({"id": share_id, "expense_id": expense_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Share not found")
+        
+        return {"message": "Share removed successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error removing expense share: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 # Shared Expenses Routes

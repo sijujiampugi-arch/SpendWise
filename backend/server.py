@@ -1084,14 +1084,20 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
 # Expense Sharing Routes
 @api_router.post("/expenses/{expense_id}/share")
 async def share_expense(expense_id: str, share_data: ExpenseShareCreate, user: User = Depends(require_auth)):
-    """Share an expense with another user"""
+    """Share an expense with another user (role-based access control)"""
     try:
-        logging.info(f"Sharing expense {expense_id} with {share_data.shared_with_email} by {user.email}")
+        logging.info(f"Sharing expense {expense_id} with {share_data.shared_with_email} by {user.email} (role: {user.role})")
         
-        # Check if user owns the expense
-        expense = await db.expenses.find_one({"id": expense_id, "user_id": user.id})
+        # Get the expense first to check ownership
+        expense = await db.expenses.find_one({"id": expense_id})
         if not expense:
-            raise HTTPException(status_code=404, detail="Expense not found or you don't have permission to share it")
+            raise HTTPException(status_code=404, detail="Expense not found")
+        
+        # Check role-based share permissions
+        if not can_share_expense(user, expense["user_id"]):
+            raise HTTPException(status_code=403, detail="You don't have permission to share this expense")
+        
+        logging.info(f"Share permission granted for user {user.email} (role: {user.role}) on expense owned by {expense['user_id']}")
         
         # Validate permission level
         if share_data.permission not in ["view", "edit"]:

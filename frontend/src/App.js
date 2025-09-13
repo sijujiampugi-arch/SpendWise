@@ -858,11 +858,11 @@ const AddExpense = ({ categories, onExpenseAdded, user }) => {
           <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="form-select"
+            className="form-select category-select"
           >
-            {categories.map(cat => (
-              <option key={cat.name} value={cat.name}>
-                {cat.icon} {cat.name}
+            {allCategories.map(cat => (
+              <option key={cat.id} value={cat.name} style={{ color: cat.color }}>
+                {cat.emoji} {cat.name} {cat.is_system ? '' : '(Custom)'}
               </option>
             ))}
           </select>

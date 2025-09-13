@@ -1132,6 +1132,9 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
             logging.info(f"Cleaning description from '{original_description}' to '{clean_description}'")
             
             # Find and delete matching shared expense records
+            # Try multiple matching strategies since data structure might vary
+            
+            # Strategy 1: Exact match with clean description
             shared_expense_filter = {
                 "created_by": existing_expense["user_id"],
                 "category": existing_expense["category"],
@@ -1139,21 +1142,54 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
                 "date": existing_expense["date"]
             }
             
-            logging.info(f"Searching for shared expense records with filter: {shared_expense_filter}")
-            
+            logging.info(f"Strategy 1 - Searching with filter: {shared_expense_filter}")
             deleted_shared = await db.shared_expenses.delete_many(shared_expense_filter)
+            
             if deleted_shared.deleted_count > 0:
-                logging.info(f"✅ Deleted {deleted_shared.deleted_count} related shared expense records for expense {expense_id}")
+                logging.info(f"✅ Strategy 1 SUCCESS: Deleted {deleted_shared.deleted_count} shared expense records")
             else:
-                logging.warning(f"⚠️ No matching shared expense records found for expense {expense_id}")
+                logging.warning(f"⚠️ Strategy 1 FAILED: No matches found")
                 
-                # Try alternative matching - search by expense ID in shared_expenses
-                alt_filter = {"expense_id": expense_id}
-                deleted_alt = await db.shared_expenses.delete_many(alt_filter)
-                if deleted_alt.deleted_count > 0:
-                    logging.info(f"✅ Alternative match: Deleted {deleted_alt.deleted_count} shared expense records by expense_id")
+                # Strategy 2: Match with original description (in case no prefix cleanup needed)
+                alt_filter_1 = {
+                    "created_by": existing_expense["user_id"],
+                    "category": existing_expense["category"],
+                    "description": original_description,
+                    "date": existing_expense["date"]
+                }
+                
+                logging.info(f"Strategy 2 - Searching with original description: {alt_filter_1}")
+                deleted_alt_1 = await db.shared_expenses.delete_many(alt_filter_1)
+                
+                if deleted_alt_1.deleted_count > 0:
+                    logging.info(f"✅ Strategy 2 SUCCESS: Deleted {deleted_alt_1.deleted_count} shared expense records")
                 else:
-                    logging.warning(f"⚠️ No shared expense records found by expense_id either")
+                    logging.warning(f"⚠️ Strategy 2 FAILED: No matches with original description")
+                    
+                    # Strategy 3: Try matching by description and amount only (more flexible)
+                    alt_filter_2 = {
+                        "description": clean_description,
+                        "amount": existing_expense.get("amount"),
+                        "created_by": existing_expense["user_id"]
+                    }
+                    
+                    logging.info(f"Strategy 3 - Flexible matching: {alt_filter_2}")
+                    deleted_alt_2 = await db.shared_expenses.delete_many(alt_filter_2)
+                    
+                    if deleted_alt_2.deleted_count > 0:
+                        logging.info(f"✅ Strategy 3 SUCCESS: Deleted {deleted_alt_2.deleted_count} shared expense records")
+                    else:
+                        logging.warning(f"⚠️ Strategy 3 FAILED: No flexible matches found")
+                        
+                        # Strategy 4: Last resort - show what's actually in the database for debugging
+                        logging.warning("🔍 DEBUGGING: Showing all shared expenses for this user:")
+                        debug_records = await db.shared_expenses.find({"created_by": existing_expense["user_id"]}).to_list(length=10)
+                        for i, record in enumerate(debug_records):
+                            logging.warning(f"  Record {i+1}: description='{record.get('description')}', category='{record.get('category')}', date='{record.get('date')}', amount={record.get('amount')}")
+                            
+            total_deleted = deleted_shared.deleted_count + (deleted_alt_1.deleted_count if 'deleted_alt_1' in locals() else 0) + (deleted_alt_2.deleted_count if 'deleted_alt_2' in locals() else 0)
+            if total_deleted > 0:
+                logging.info(f"🎉 TOTAL CLEANUP SUCCESS: Deleted {total_deleted} shared expense records for expense {expense_id}")
         else:
             logging.info("This is not a shared expense - skipping shared_expenses cleanup")
         return {"message": "Expense deleted successfully"}

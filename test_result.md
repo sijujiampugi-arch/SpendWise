@@ -165,6 +165,21 @@ backend:
         agent: "main"
         comment: "✅ FIXED: Major refactor of shared expense validation system. Added comprehensive error handling, detailed logging, and improved validation logic. Fixed issues: 1) Added global RequestValidationError handler for better error reporting, 2) Enhanced field validation with clear error messages, 3) Improved data structure validation for shared_data, 4) Added detailed logging for debugging, 5) Fixed percentage calculation tolerance, 6) Better email validation. Backend now provides detailed error messages to frontend."
 
+  - task: "Edit and delete button functionality after full visibility"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ISSUE IDENTIFIED: User reported 'Edit and delete function for each expense was missing' after full visibility implementation. Testing revealed that GET /api/expenses was not returning the is_owned_by_me property, causing frontend canEdit() and canDelete() logic to fail. The property was being set correctly in get_accessible_expenses() but stripped out during Expense object conversion."
+      - working: true
+        agent: "testing"
+        comment: "✅ ISSUE RESOLVED: Fixed the GET /api/expenses endpoint to preserve the is_owned_by_me property by returning expense dictionaries instead of Expense objects. Comprehensive testing confirms: 1) ✅ All expenses now include is_owned_by_me property (True/False), 2) ✅ PUT /api/expenses/{expense_id} edit functionality works correctly, 3) ✅ DELETE /api/expenses/{expense_id} delete functionality works correctly, 4) ✅ Frontend canEdit() and canDelete() logic has all required data, 5) ✅ Authentication properly enforced. Edit and delete buttons will now appear correctly!"
+
   - task: "Full visibility implementation - all users see ALL expenses"
     implemented: true
     working: true

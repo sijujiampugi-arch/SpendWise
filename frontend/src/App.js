@@ -304,6 +304,12 @@ function MainApp() {
             📄 Import
           </button>
           <button 
+            className={`nav-button ${currentView === 'categories' ? 'active' : ''}`}
+            onClick={() => setCurrentView('categories')}
+          >
+            🏷️ Categories
+          </button>
+          <button 
             className={`nav-button ${currentView === 'settings' ? 'active' : ''}`}
             onClick={() => setCurrentView('settings')}
           >

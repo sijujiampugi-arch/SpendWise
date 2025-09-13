@@ -135,6 +135,8 @@ class ExpenseUpdate(BaseModel):
     category: str = Field(..., min_length=1, description="Category cannot be empty")
     description: str = Field(..., min_length=1, description="Description cannot be empty")
     date: date
+    is_shared: bool = Field(default=False)
+    shared_data: Optional[Dict[str, Any]] = Field(default=None, description="Shared expense data if is_shared is True")
 
     class Config:
         json_encoders = {

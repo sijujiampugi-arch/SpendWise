@@ -440,7 +440,7 @@ function MainApp() {
                 <Dashboard stats={stats} categories={categories} />
               )}
               {currentView === 'add' && (
-                <AddExpense categories={categories} onExpenseAdded={loadData} user={user} />
+                <AddExpense categories={categories} allCategories={allCategories} onExpenseAdded={loadData} user={user} />
               )}
               {currentView === 'expenses' && (
                 <ExpensesList expenses={expenses} categories={categories} onExpenseDeleted={loadData} />

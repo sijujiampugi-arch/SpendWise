@@ -117,18 +117,6 @@ class Expense(BaseModel):
     is_shared: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-class ExpenseCreate(BaseModel):
-    amount: float = Field(..., gt=0, description="Amount must be greater than 0")
-    category: str = Field(..., min_length=1, description="Category cannot be empty")
-    description: str = Field(..., min_length=1, description="Description cannot be empty")
-    date: date
-    is_shared: bool = Field(default=False)
-    shared_data: Optional[Dict[str, Any]] = Field(default=None, description="Shared expense data if is_shared is True")
-
-    class Config:
-        json_encoders = {
-            date: lambda v: v.isoformat()
-        }
 
 class ExpenseUpdate(BaseModel):
     amount: float = Field(..., gt=0, description="Amount must be greater than 0")

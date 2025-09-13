@@ -1166,11 +1166,11 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
                 else:
                     logging.warning(f"⚠️ Strategy 2 FAILED: No matches with original description")
                     
-                    # Strategy 3: Try matching by description and amount only (more flexible)
+                    # Strategy 3: Try matching by description only (ignore amount differences due to splitting)
                     alt_filter_2 = {
                         "description": clean_description,
-                        "amount": existing_expense.get("amount"),
-                        "created_by": existing_expense["user_id"]
+                        "created_by": existing_expense["user_id"],
+                        "date": existing_expense["date"]
                     }
                     
                     logging.info(f"Strategy 3 - Flexible matching: {alt_filter_2}")

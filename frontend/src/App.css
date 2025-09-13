@@ -792,6 +792,7 @@ body {
     flex-direction: column;
     align-items: flex-start;
     text-align: left;
+    gap: var(--spacing-md);
   }
   
   .expense-amount {
@@ -799,6 +800,35 @@ body {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+  }
+
+  /* Make delete button more accessible on mobile */
+  .delete-button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-base);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    background: var(--accent-red);
+    color: white;
+    border: 2px solid var(--accent-red);
+    touch-action: manipulation;
+  }
+
+  .delete-button:hover {
+    background: #dc3545;
+    border-color: #dc3545;
+    transform: none; /* Remove transform on mobile for better performance */
+  }
+
+  .delete-button:active {
+    background: #bd2130;
+    border-color: #bd2130;
+    transform: scale(0.95);
   }
 
   .form-row {

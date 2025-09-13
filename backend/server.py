@@ -720,6 +720,48 @@ async def get_expense_stats(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@api_router.put("/expenses/{expense_id}", response_model=Expense)
+async def update_expense(expense_id: str, expense_data: ExpenseUpdate, user: User = Depends(require_auth)):
+    """Update an existing expense"""
+    try:
+        logging.info(f"Updating expense {expense_id} for user {user.email}: {expense_data.dict()}")
+        
+        # Check if expense exists and belongs to user
+        existing_expense = await db.expenses.find_one({"id": expense_id, "user_id": user.id})
+        if not existing_expense:
+            raise HTTPException(status_code=404, detail="Expense not found")
+        
+        # Parse existing expense
+        existing_expense = parse_from_mongo(existing_expense)
+        
+        # Update fields
+        updated_expense = Expense(
+            id=expense_id,
+            amount=expense_data.amount,
+            category=expense_data.category,
+            description=expense_data.description,
+            date=expense_data.date,
+            user_id=user.id,
+            is_shared=existing_expense.get("is_shared", False),
+            created_at=existing_expense.get("created_at", datetime.now(timezone.utc))
+        )
+        
+        # Update in database
+        expense_dict = prepare_for_mongo(updated_expense.dict())
+        await db.expenses.update_one(
+            {"id": expense_id, "user_id": user.id},
+            {"$set": expense_dict}
+        )
+        
+        logging.info(f"Expense {expense_id} updated successfully")
+        return updated_expense
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating expense: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 @api_router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
     """Delete an expense"""

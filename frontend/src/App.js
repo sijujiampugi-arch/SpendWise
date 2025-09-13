@@ -150,10 +150,13 @@ function MainApp() {
   const [colorPalette, setColorPalette] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
 
-  // Load data on component mount and when filters change
+  // Load data on component mount and when month/year changes
   useEffect(() => {
-    loadData();
-  }, [selectedMonth, selectedYear]);
+    if (user) {
+      loadData();
+      loadCategories(); // Load categories whenever user changes
+    }
+  }, [user, selectedMonth, selectedYear, loadCategories]);
 
   const loadData = async () => {
     setLoading(true);

@@ -1125,6 +1125,8 @@ const ImportManager = ({ categories, onImportComplete }) => {
       }
       
       alert(`Upload failed: ${errorMessage}`);
+    } finally {
+      setUploadingPreview(false);
     }
   };
 

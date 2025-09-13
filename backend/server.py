@@ -132,6 +132,9 @@ class ExpenseCreate(BaseModel):
 
 class ExpenseStats(BaseModel):
     total_expenses: float
+    total_individual_expenses: float
+    total_shared_expenses: float
+    shared_expense_count: int
     category_breakdown: Dict[str, float]
     monthly_trend: List[Dict[str, Any]]
     top_category: Optional[str]

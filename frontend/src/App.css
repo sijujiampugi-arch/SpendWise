@@ -612,6 +612,36 @@ body {
   color: var(--text-primary);
 }
 
+.expense-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.edit-button {
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.8;
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.edit-button:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  background: #0056b3;
+}
+
 .delete-button {
   background: var(--accent-red);
   color: white;

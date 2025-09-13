@@ -3060,6 +3060,13 @@ class BackendTester:
         print("\n📊 ESSENTIAL BACKEND TESTS")
         print("-" * 40)
         self.test_categories_endpoint()
+        
+        # EMOJI VERIFICATION TESTS (Priority for this review)
+        print("\n🎭 EMOJI VERIFICATION TESTS - PRIORITY FOCUS")
+        print("-" * 40)
+        self.test_categories_emoji_verification()
+        self.test_individual_category_emoji_structure()
+        
         self.test_expense_creation()
         self.test_expense_retrieval()
         self.test_statistics_endpoint()

@@ -57,13 +57,38 @@ class ExpenseCategory(str, Enum):
     TRANSPORT = "Transport"
     OTHER = "Other"
 
+# User Role Enum
+class UserRole(str, Enum):
+    OWNER = "owner"
+    CO_OWNER = "co_owner"
+    EDITOR = "editor"
+    VIEWER = "viewer"
+
 # Authentication Models
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: str
     name: str
     picture: str
+    role: UserRole = UserRole.VIEWER  # Default role for new users
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# User Management Models
+class UserRoleUpdate(BaseModel):
+    user_email: str
+    new_role: UserRole
+
+class UserCreate(BaseModel):
+    email: str
+    role: UserRole = UserRole.VIEWER
+
+class UserManagement(BaseModel):
+    id: str
+    email: str
+    name: str
+    picture: str
+    role: UserRole
+    created_at: datetime
 
 class UserSession(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

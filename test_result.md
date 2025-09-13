@@ -354,6 +354,18 @@ test_plan:
         agent: "testing"
         comment: "✅ CRITICAL BUG FIXED: Found and resolved issue where is_owned_by_me property was being stripped from API responses. Root cause: GET /api/expenses endpoint was converting expense dictionaries to Expense objects, losing additional properties. Fix applied: Modified endpoint to return dictionaries instead of objects, preserving all ownership flags. Testing confirmed: 1) GET /api/expenses now returns ALL expenses with is_owned_by_me property, 2) PUT and DELETE endpoints working correctly for owned expenses, 3) Authentication properly enforced, 4) Frontend canEdit/canDelete logic now has required data. Edit and delete button functionality restored."
 
+  - task: "Role-based access control system implementation"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py, /app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "User requested comprehensive role-based access control with Owner, Co-owner, Editor, and Viewer roles. Implemented: 1) Backend: UserRole enum, role-based permission functions, user management endpoints, 2) Frontend: User management interface with role assignment, user listing, role changes, user removal, 3) Permission logic: Owner/Co-owner can edit/delete any expense, Editor can edit/delete own expenses, Viewer can only view, 4) First user becomes Owner automatically, 5) Admin interface restricted to Owner/Co-owner roles, 6) Updated all expense endpoints to use role-based permissions instead of simple ownership checks."
+
 agent_communication:
   - agent: "main"
     message: "Phase 1 complete: Authentication + Custom Categories implemented. Need to test auth flow, session management, and custom category creation before proceeding to shared expenses and spreadsheet import."

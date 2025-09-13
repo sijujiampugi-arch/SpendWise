@@ -886,25 +886,108 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
         <div className="expenses-grid">
           {expenses.map(expense => (
             <div key={expense.id} className="expense-item">
-              <div className="expense-icon" style={{ backgroundColor: getCategoryColor(expense.category) }}>
-                {getCategoryIcon(expense.category)}
-              </div>
-              <div className="expense-details">
-                <h4>{expense.description}</h4>
-                <p className="expense-category">{expense.category}</p>
-                <p className="expense-date">{new Date(expense.date).toLocaleDateString()}</p>
-                {expense.is_shared && <span className="shared-badge">👥 Shared</span>}
-              </div>
-              <div className="expense-amount">
-                <span>{formatCurrency(expense.amount)}</span>
-                <button 
-                  onClick={() => handleDelete(expense.id)}
-                  className="delete-button"
-                  title="Delete expense"
-                >
-                  🗑️
-                </button>
-              </div>
+              {editingExpense === expense.id ? (
+                // Edit Mode
+                <div className="expense-edit-form">
+                  <div className="edit-form-header">
+                    <h4>✏️ Edit Expense</h4>
+                  </div>
+                  <div className="edit-form-content">
+                    <div className="edit-form-row">
+                      <div className="edit-form-group">
+                        <label>Amount (₱)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editFormData.amount}
+                          onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
+                          className="edit-form-input"
+                        />
+                      </div>
+                      <div className="edit-form-group">
+                        <label>Category</label>
+                        <select
+                          value={editFormData.category}
+                          onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                          className="edit-form-select"
+                        >
+                          {categories.map(cat => (
+                            <option key={cat.name} value={cat.name}>
+                              {cat.icon} {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="edit-form-row">
+                      <div className="edit-form-group">
+                        <label>Description</label>
+                        <input
+                          type="text"
+                          value={editFormData.description}
+                          onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                          className="edit-form-input"
+                        />
+                      </div>
+                      <div className="edit-form-group">
+                        <label>Date</label>
+                        <input
+                          type="date"
+                          value={editFormData.date}
+                          onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
+                          className="edit-form-input"
+                        />
+                      </div>
+                    </div>
+                    <div className="edit-form-actions">
+                      <button 
+                        onClick={() => handleSaveEdit(expense.id)}
+                        className="save-edit-button"
+                      >
+                        ✅ Save
+                      </button>
+                      <button 
+                        onClick={handleCancelEdit}
+                        className="cancel-edit-button"
+                      >
+                        ❌ Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // View Mode
+                <>
+                  <div className="expense-icon" style={{ backgroundColor: getCategoryColor(expense.category) }}>
+                    {getCategoryIcon(expense.category)}
+                  </div>
+                  <div className="expense-details">
+                    <h4>{expense.description}</h4>
+                    <p className="expense-category">{expense.category}</p>
+                    <p className="expense-date">{new Date(expense.date).toLocaleDateString()}</p>
+                    {expense.is_shared && <span className="shared-badge">👥 Shared</span>}
+                  </div>
+                  <div className="expense-amount">
+                    <span>{formatCurrency(expense.amount)}</span>
+                    <div className="expense-actions">
+                      <button 
+                        onClick={() => handleEdit(expense)}
+                        className="edit-button"
+                        title="Edit expense"
+                      >
+                        ✏️
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(expense.id)}
+                        className="delete-button"
+                        title="Delete expense"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

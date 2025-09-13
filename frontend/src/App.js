@@ -981,7 +981,7 @@ const AddExpense = ({ categories, allCategories, onExpenseAdded, user }) => {
 };
 
 // Expenses List Component
-const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
+const ExpensesList = ({ expenses, categories, allCategories, onExpenseDeleted }) => {
   const [editingExpense, setEditingExpense] = useState(null);
   const [sharingExpense, setSharingExpense] = useState(null);
   const [editFormData, setEditFormData] = useState({

@@ -418,7 +418,7 @@ class BackendTester:
                 
                 # Check if each category has required fields
                 for cat in categories:
-                    if not all(key in cat for key in ["name", "color", "icon"]):
+                    if not all(key in cat for key in ["name", "color", "emoji"]):
                         self.log_result("Categories Endpoint", False, f"Category missing required fields: {cat}")
                         return
                 
@@ -428,6 +428,236 @@ class BackendTester:
                 self.log_result("Categories Endpoint", False, f"HTTP {response.status_code}", response.text)
         except Exception as e:
             self.log_result("Categories Endpoint", False, f"Request error: {str(e)}")
+    
+    def test_categories_emoji_verification(self):
+        """Test GET /api/categories endpoint specifically for emoji encoding and display"""
+        print("\n🎭 EMOJI VERIFICATION TESTS FOR CATEGORIES")
+        print("-" * 60)
+        
+        # Expected system categories with their emojis
+        expected_system_categories = {
+            "Dining Out": "🍽️",
+            "Grocery": "🛒", 
+            "Fuel": "⛽",
+            "Transportation": "🚗",
+            "Shopping": "🛍️",
+            "Bills & Utilities": "💡",
+            "Healthcare": "⚕️",
+            "Entertainment": "🎬"
+        }
+        
+        try:
+            response = requests.get(f"{BASE_URL}/categories", headers=self.auth_headers, timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("Emoji Verification: Categories Endpoint", True, 
+                              "Categories endpoint correctly requires authentication (cannot test emojis without auth)")
+            elif response.status_code == 200:
+                categories = response.json()
+                
+                if not isinstance(categories, list):
+                    self.log_result("Emoji Verification: Response Format", False, 
+                                  "Categories response is not a list", categories)
+                    return
+                
+                # Check each expected system category for emoji presence
+                emoji_results = {}
+                system_categories_found = []
+                
+                for category in categories:
+                    if not isinstance(category, dict):
+                        continue
+                        
+                    cat_name = category.get("name", "")
+                    cat_emoji = category.get("emoji", "")
+                    is_system = category.get("is_system", False)
+                    
+                    if cat_name in expected_system_categories:
+                        system_categories_found.append(cat_name)
+                        expected_emoji = expected_system_categories[cat_name]
+                        
+                        # Check if emoji matches expected
+                        if cat_emoji == expected_emoji:
+                            emoji_results[cat_name] = {
+                                "status": "✅ CORRECT",
+                                "expected": expected_emoji,
+                                "actual": cat_emoji,
+                                "is_system": is_system
+                            }
+                        elif cat_emoji:
+                            emoji_results[cat_name] = {
+                                "status": "⚠️ WRONG EMOJI",
+                                "expected": expected_emoji,
+                                "actual": cat_emoji,
+                                "is_system": is_system
+                            }
+                        else:
+                            emoji_results[cat_name] = {
+                                "status": "❌ MISSING EMOJI",
+                                "expected": expected_emoji,
+                                "actual": "None/Empty",
+                                "is_system": is_system
+                            }
+                
+                # Check for missing system categories
+                missing_categories = set(expected_system_categories.keys()) - set(system_categories_found)
+                
+                # Generate detailed results
+                correct_emojis = sum(1 for r in emoji_results.values() if r["status"] == "✅ CORRECT")
+                total_expected = len(expected_system_categories)
+                
+                if correct_emojis == total_expected and not missing_categories:
+                    self.log_result("Emoji Verification: System Categories", True, 
+                                  f"All {total_expected} system categories have correct emojis", 
+                                  f"Results: {emoji_results}")
+                else:
+                    issues = []
+                    if missing_categories:
+                        issues.append(f"Missing categories: {list(missing_categories)}")
+                    
+                    wrong_emojis = [name for name, result in emoji_results.items() 
+                                  if result["status"] != "✅ CORRECT"]
+                    if wrong_emojis:
+                        issues.append(f"Emoji issues in: {wrong_emojis}")
+                    
+                    self.log_result("Emoji Verification: System Categories", False, 
+                                  f"Emoji issues found: {'; '.join(issues)}", 
+                                  f"Detailed results: {emoji_results}")
+                
+                # Test emoji encoding in response
+                response_text = response.text
+                emoji_encoding_test = {
+                    "🍽️": "🍽️" in response_text,
+                    "🛒": "🛒" in response_text,
+                    "⛽": "⛽" in response_text,
+                    "🚗": "🚗" in response_text,
+                    "🛍️": "🛍️" in response_text,
+                    "💡": "💡" in response_text,
+                    "⚕️": "⚕️" in response_text,
+                    "🎬": "🎬" in response_text
+                }
+                
+                encoded_emojis = sum(1 for present in emoji_encoding_test.values() if present)
+                total_emojis = len(emoji_encoding_test)
+                
+                if encoded_emojis == total_emojis:
+                    self.log_result("Emoji Verification: Response Encoding", True, 
+                                  f"All {total_emojis} emojis properly encoded in API response", 
+                                  f"Encoding test: {emoji_encoding_test}")
+                else:
+                    missing_in_response = [emoji for emoji, present in emoji_encoding_test.items() if not present]
+                    self.log_result("Emoji Verification: Response Encoding", False, 
+                                  f"Emojis missing from response: {missing_in_response}", 
+                                  f"Encoding test: {emoji_encoding_test}")
+                
+                # Test CategoryResponse model structure
+                if categories:
+                    sample_category = categories[0]
+                    required_fields = ["id", "name", "color", "emoji", "is_system", "created_at"]
+                    missing_fields = [field for field in required_fields if field not in sample_category]
+                    
+                    if not missing_fields:
+                        self.log_result("Emoji Verification: CategoryResponse Model", True, 
+                                      "CategoryResponse model includes all required fields including emoji", 
+                                      f"Sample category: {sample_category}")
+                    else:
+                        self.log_result("Emoji Verification: CategoryResponse Model", False, 
+                                      f"CategoryResponse model missing fields: {missing_fields}", 
+                                      f"Available fields: {list(sample_category.keys())}")
+                
+            else:
+                self.log_result("Emoji Verification: Categories Endpoint", False, 
+                              f"Unexpected HTTP {response.status_code}", response.text)
+                
+        except Exception as e:
+            self.log_result("Emoji Verification: Categories Endpoint", False, f"Request error: {str(e)}")
+    
+    def test_individual_category_emoji_structure(self):
+        """Test individual system category data structure for emoji field"""
+        print("\n🔍 INDIVIDUAL CATEGORY EMOJI STRUCTURE TESTS")
+        print("-" * 60)
+        
+        try:
+            response = requests.get(f"{BASE_URL}/categories", headers=self.auth_headers, timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("Individual Category: Structure Test", True, 
+                              "Categories endpoint correctly requires authentication")
+            elif response.status_code == 200:
+                categories = response.json()
+                
+                if not isinstance(categories, list):
+                    self.log_result("Individual Category: Structure Test", False, 
+                                  "Categories response should be a list", categories)
+                    return
+                
+                # Test each category individually
+                for i, category in enumerate(categories):
+                    if not isinstance(category, dict):
+                        self.log_result(f"Individual Category: Category {i+1} Structure", False, 
+                                      f"Category {i+1} is not a dictionary", category)
+                        continue
+                    
+                    cat_name = category.get("name", f"Category_{i+1}")
+                    
+                    # Check for emoji field presence
+                    if "emoji" not in category:
+                        self.log_result(f"Individual Category: {cat_name} Emoji Field", False, 
+                                      f"Category '{cat_name}' missing emoji field", category)
+                        continue
+                    
+                    emoji_value = category["emoji"]
+                    
+                    # Check emoji field type and content
+                    if not isinstance(emoji_value, str):
+                        self.log_result(f"Individual Category: {cat_name} Emoji Type", False, 
+                                      f"Category '{cat_name}' emoji field is not a string: {type(emoji_value)}", 
+                                      f"Emoji value: {emoji_value}")
+                        continue
+                    
+                    if not emoji_value:
+                        self.log_result(f"Individual Category: {cat_name} Emoji Content", False, 
+                                      f"Category '{cat_name}' has empty emoji field", category)
+                        continue
+                    
+                    # Check if it's actually an emoji (basic check)
+                    if len(emoji_value) > 0:
+                        self.log_result(f"Individual Category: {cat_name} Emoji Content", True, 
+                                      f"Category '{cat_name}' has emoji: '{emoji_value}'", 
+                                      f"Emoji length: {len(emoji_value)} chars")
+                    
+                    # Check other required fields
+                    required_fields = ["id", "name", "color", "is_system", "created_at"]
+                    missing_fields = [field for field in required_fields if field not in category]
+                    
+                    if missing_fields:
+                        self.log_result(f"Individual Category: {cat_name} Required Fields", False, 
+                                      f"Category '{cat_name}' missing fields: {missing_fields}", category)
+                    else:
+                        self.log_result(f"Individual Category: {cat_name} Required Fields", True, 
+                                      f"Category '{cat_name}' has all required fields")
+                
+                # Summary test
+                total_categories = len(categories)
+                categories_with_emojis = sum(1 for cat in categories 
+                                           if isinstance(cat, dict) and 
+                                           cat.get("emoji") and 
+                                           isinstance(cat.get("emoji"), str))
+                
+                if categories_with_emojis == total_categories:
+                    self.log_result("Individual Category: Overall Emoji Coverage", True, 
+                                  f"All {total_categories} categories have emoji fields with content")
+                else:
+                    missing_emoji_count = total_categories - categories_with_emojis
+                    self.log_result("Individual Category: Overall Emoji Coverage", False, 
+                                  f"{missing_emoji_count} out of {total_categories} categories missing or have empty emoji fields")
+                
+            else:
+                self.log_result("Individual Category: Structure Test", False, 
+                              f"Unexpected HTTP {response.status_code}", response.text)
+                
+        except Exception as e:
+            self.log_result("Individual Category: Structure Test", False, f"Request error: {str(e)}")
     
     def test_expense_creation(self):
         """Test POST /api/expenses with various scenarios (expects 401 without auth)"""

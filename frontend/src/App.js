@@ -467,11 +467,26 @@ const Dashboard = ({ stats, categories }) => {
           </div>
         </div>
         <div className="summary-card">
+          <div className="card-icon">👥</div>
+          <div className="card-content">
+            <h3>Shared Expenses</h3>
+            <p className="card-amount">{formatCurrency(stats.total_shared_expenses || 0)}</p>
+            <p className="card-subtitle">{stats.shared_expense_count || 0} expenses</p>
+          </div>
+        </div>
+        <div className="summary-card">
+          <div className="card-icon">👤</div>
+          <div className="card-content">
+            <h3>Individual</h3>
+            <p className="card-amount">{formatCurrency(stats.total_individual_expenses || 0)}</p>
+          </div>
+        </div>
+        <div className="summary-card">
           <div className="card-icon">📊</div>
           <div className="card-content">
             <h3>Top Category</h3>
             <p className="card-category">{stats.top_category || 'None'}</p>
-            <p className="card-amount">{formatCurrency(stats.top_category_amount)}</p>
+            <p className="card-amount">{formatCurrency(stats.top_category_amount || 0)}</p>
           </div>
         </div>
       </div>

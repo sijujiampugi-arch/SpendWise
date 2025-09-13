@@ -294,10 +294,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Critical Owner delete bug - RESOLVED"
+    - "Critical Owner delete bug - VERIFIED AND RESOLVED"
   stuck_tasks: []
   test_all: false
-  test_priority: "critical_bug_fixed"
+  test_priority: "critical_bug_verified"
 
   - task: "Spreadsheet import functionality (CSV/Excel)"
     implemented: true

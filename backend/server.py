@@ -1096,6 +1096,10 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
         
         logging.info(f"Delete permission granted for user {user.email} (role: {user.role}) on expense owned by {existing_expense['user_id']}")
         
+        # Add debugging to check expense fields before deletion
+        logging.info(f"Expense to delete - ID: {expense_id}, Fields: {list(existing_expense.keys())}")
+        logging.info(f"Expense is_shared value: {existing_expense.get('is_shared', 'FIELD_NOT_FOUND')}")
+        
         # Delete the expense
         result = await db.expenses.delete_one({"id": expense_id})
         if result.deleted_count == 0:

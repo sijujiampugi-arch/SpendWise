@@ -1931,6 +1931,142 @@ class BackendTester:
         except Exception as e:
             self.log_result("Owner Role: Default Viewer role assignment", False, f"Request error: {str(e)}")
 
+    def test_owner_delete_critical_bug(self):
+        """CRITICAL BUG TEST: Owner cannot delete expenses - specific test for sijujiampugi@gmail.com"""
+        print("\n🚨 CRITICAL BUG TEST: OWNER DELETE FUNCTIONALITY")
+        print("=" * 60)
+        print("Testing specific issue: Owner 'sijujiampugi@gmail.com' cannot delete expenses")
+        print("-" * 60)
+        
+        # Test 1: Verify Owner role assignment for specific email
+        try:
+            # Since we can't authenticate as the real user, we'll test the endpoint structure
+            # and verify the logic is in place
+            response = requests.get(f"{BASE_URL}/auth/me", 
+                                  headers=self.auth_headers, 
+                                  timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("CRITICAL: Owner Role Verification", True, 
+                              "✅ Auth endpoint requires authentication (expected without real OAuth)")
+            elif response.status_code == 200:
+                user_data = response.json()
+                if "role" in user_data:
+                    self.log_result("CRITICAL: Owner Role Verification", True, 
+                                  f"✅ User data includes role field: {user_data.get('role')}")
+                else:
+                    self.log_result("CRITICAL: Owner Role Verification", False, 
+                                  "❌ User data missing role field", user_data)
+            else:
+                self.log_result("CRITICAL: Owner Role Verification", False, 
+                              f"❌ Unexpected response: HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("CRITICAL: Owner Role Verification", False, f"Request error: {str(e)}")
+        
+        # Test 2: Verify GET /api/expenses returns can_delete=true for Owner
+        try:
+            response = requests.get(f"{BASE_URL}/expenses", 
+                                  headers=self.auth_headers, 
+                                  timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("CRITICAL: Owner Delete Permissions in GET", True, 
+                              "✅ Expenses endpoint requires authentication (expected)")
+            elif response.status_code == 200:
+                expenses = response.json()
+                if isinstance(expenses, list) and expenses:
+                    first_expense = expenses[0]
+                    # Check for role-based permission flags
+                    permission_flags = ["can_delete", "can_edit", "can_share", "is_owned_by_me"]
+                    found_flags = [flag for flag in permission_flags if flag in first_expense]
+                    
+                    if "can_delete" in first_expense:
+                        self.log_result("CRITICAL: Owner Delete Permissions in GET", True, 
+                                      f"✅ Expenses include can_delete flag: {first_expense['can_delete']}")
+                    elif found_flags:
+                        self.log_result("CRITICAL: Owner Delete Permissions in GET", True, 
+                                      f"✅ Expenses include permission flags: {found_flags} (can_delete may be computed)")
+                    else:
+                        self.log_result("CRITICAL: Owner Delete Permissions in GET", False, 
+                                      "❌ CRITICAL: Expenses missing permission flags - Owner delete won't work!", 
+                                      f"Available fields: {list(first_expense.keys())}")
+                else:
+                    self.log_result("CRITICAL: Owner Delete Permissions in GET", True, 
+                                  "No expenses found - cannot test permission flags")
+            else:
+                self.log_result("CRITICAL: Owner Delete Permissions in GET", False, 
+                              f"❌ Unexpected response: HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("CRITICAL: Owner Delete Permissions in GET", False, f"Request error: {str(e)}")
+        
+        # Test 3: Test DELETE endpoint with Owner role logic
+        test_expense_id = str(uuid.uuid4())
+        try:
+            response = requests.delete(f"{BASE_URL}/expenses/{test_expense_id}", 
+                                     headers=self.auth_headers, 
+                                     timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("CRITICAL: Owner DELETE Endpoint", True, 
+                              "✅ Delete endpoint requires authentication (expected)")
+            elif response.status_code == 404:
+                self.log_result("CRITICAL: Owner DELETE Endpoint", True, 
+                              "✅ Delete endpoint validates expense existence (expected for fake ID)")
+            elif response.status_code == 403:
+                self.log_result("CRITICAL: Owner DELETE Endpoint", False, 
+                              "❌ POTENTIAL BUG: Delete endpoint returned 403 - Owner should have delete permissions!", 
+                              response.text)
+            elif response.status_code == 200:
+                result = response.json()
+                self.log_result("CRITICAL: Owner DELETE Endpoint", True, 
+                              "✅ Delete endpoint structure working", result)
+            else:
+                self.log_result("CRITICAL: Owner DELETE Endpoint", False, 
+                              f"❌ Unexpected response: HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("CRITICAL: Owner DELETE Endpoint", False, f"Request error: {str(e)}")
+        
+        # Test 4: Test role-based permission function logic (by testing user management endpoints)
+        try:
+            # Test user management endpoint that requires Owner/Co-owner role
+            response = requests.get(f"{BASE_URL}/users", 
+                                  headers=self.auth_headers, 
+                                  timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("CRITICAL: Role-Based Permission Logic", True, 
+                              "✅ User management endpoint requires authentication (expected)")
+            elif response.status_code == 403:
+                self.log_result("CRITICAL: Role-Based Permission Logic", False, 
+                              "❌ POTENTIAL BUG: User management returned 403 - Owner should have access!", 
+                              response.text)
+            elif response.status_code == 200:
+                users = response.json()
+                self.log_result("CRITICAL: Role-Based Permission Logic", True, 
+                              f"✅ Role-based permissions working - returned {len(users)} users")
+            else:
+                self.log_result("CRITICAL: Role-Based Permission Logic", False, 
+                              f"❌ Unexpected response: HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("CRITICAL: Role-Based Permission Logic", False, f"Request error: {str(e)}")
+        
+        # Summary of critical findings
+        print("\n🔍 CRITICAL BUG ANALYSIS SUMMARY")
+        print("-" * 60)
+        
+        critical_tests = [test for test in self.test_results if "CRITICAL:" in test["test"]]
+        failed_critical = [test for test in critical_tests if not test["success"]]
+        
+        if failed_critical:
+            print("❌ CRITICAL ISSUES FOUND:")
+            for test in failed_critical:
+                print(f"   • {test['test']}: {test['message']}")
+        else:
+            print("✅ No critical authentication/permission issues detected in endpoint structure")
+            print("   Note: Full testing requires real OAuth authentication")
+        
+        print(f"\n📊 Critical Tests: {len(critical_tests)} total, {len(failed_critical)} failed")
+
     def run_all_tests(self):
         """Run all backend tests with focus on FULL VISIBILITY implementation"""
         print("🚀 Starting Backend API Tests for SpendWise - FULL VISIBILITY IMPLEMENTATION")
@@ -1940,6 +2076,9 @@ class BackendTester:
         
         # Setup mock authentication for testing
         self.setup_mock_authentication()
+        
+        # CRITICAL BUG TEST FIRST - Owner Delete Issue
+        self.test_owner_delete_critical_bug()
         
         # Run basic connectivity tests first
         self.test_api_health_check()

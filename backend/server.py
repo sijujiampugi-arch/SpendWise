@@ -397,6 +397,11 @@ async def get_accessible_expenses(user: User, filter_query: dict) -> List[dict]:
             else:
                 expense["is_owned_by_me"] = False
             
+            # Add role-based permission flags for frontend
+            expense["can_edit"] = can_edit_expense(user, expense.get("user_id"))
+            expense["can_delete"] = can_delete_expense(user, expense.get("user_id"))
+            expense["can_share"] = can_share_expense(user, expense.get("user_id"))
+            
             # Mark if expense is shared with this user
             if expense["id"] in shared_expense_ids:
                 share = next((s for s in shares if s["expense_id"] == expense["id"]), None)

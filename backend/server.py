@@ -1104,6 +1104,36 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
         # Also delete any shares of this expense
         await db.expense_shares.delete_many({"expense_id": expense_id})
         
+        # CRITICAL FIX: Clean up related shared_expenses records
+        # When deleting a shared expense from main expenses tab, we need to remove
+        # the corresponding record from shared_expenses collection
+        if existing_expense.get("is_shared", False):
+            # For shared expenses, try to find and delete the related shared_expense record
+            # We'll match by user, amount, category, description, and date
+            original_description = existing_expense["description"]
+            
+            # Remove the [SHARED] or [SHARED - CREATED] prefix to get original description
+            if original_description.startswith("[SHARED - CREATED] "):
+                clean_description = original_description[19:]  # Remove "[SHARED - CREATED] "
+            elif original_description.startswith("[SHARED] "):
+                clean_description = original_description[9:]   # Remove "[SHARED] "
+            else:
+                clean_description = original_description
+            
+            # Find and delete matching shared expense records
+            shared_expense_filter = {
+                "created_by": existing_expense["user_id"],
+                "category": existing_expense["category"],
+                "description": clean_description,
+                "date": existing_expense["date"]
+            }
+            
+            deleted_shared = await db.shared_expenses.delete_many(shared_expense_filter)
+            if deleted_shared.deleted_count > 0:
+                logging.info(f"Deleted {deleted_shared.deleted_count} related shared expense records for expense {expense_id}")
+            else:
+                logging.warning(f"No matching shared expense records found for expense {expense_id}")
+        
         return {"message": "Expense deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -682,7 +682,7 @@ const Dashboard = ({ stats, categories }) => {
 };
 
 // Add Expense Component (Enhanced with Shared Expenses)
-const AddExpense = ({ categories, onExpenseAdded, user }) => {
+const AddExpense = ({ categories, allCategories, onExpenseAdded, user }) => {
   const [formData, setFormData] = useState({
     amount: '',
     category: categories.length > 0 ? categories[0].name : 'Grocery',

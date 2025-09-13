@@ -179,7 +179,7 @@ function MainApp() {
   };
 
   // User management functions
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setUserManagementLoading(true);
     try {
       const [usersRes, rolesRes] = await Promise.all([
@@ -193,7 +193,7 @@ function MainApp() {
       alert(error.response?.data?.detail || 'Error loading users');
     }
     setUserManagementLoading(false);
-  };
+  }, []); // Empty dependency array since it doesn't depend on any props/state
 
   const assignUserRole = async (email, role) => {
     try {

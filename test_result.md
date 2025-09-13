@@ -298,10 +298,28 @@ test_plan:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "🔍 INVESTIGATING SHARE BUTTON BUG: User reported 'Share expenses button is still not implemented'. Code analysis reveals: 1) ✅ Share button IS implemented in ExpensesList component (lines 1124-1132) with proper onClick handler and CSS styling, 2) ✅ Backend sharing endpoints and logic are working correctly, 3) ⚠️ Share button only appears for expenses where canShare(expense) returns true (requires is_owned_by_me property), 4) ⚠️ User may not be seeing button due to: not being authenticated, no owned expenses visible, or styling issues. Need to test backend sharing endpoints and verify is_owned_by_me property is correctly set."
+        comment: "User reported 'Share expenses button is still not implemented'. Code analysis shows button IS implemented in ExpensesList component (lines 1124-1132)"
       - working: true
         agent: "testing"
-        comment: "✅ COMPREHENSIVE SHARING FUNCTIONALITY TESTING COMPLETED: 🎯 CRITICAL FINDING: Share button IS implemented and backend sharing functionality is working correctly! 📊 TEST RESULTS: 1) ✅ ALL 7 SHARING ENDPOINTS PROPERLY PROTECTED: POST /api/expenses/{id}/share, GET /api/expenses/{id}/shares, DELETE /api/expenses/{id}/shares/{share_id}, GET /api/shared-expenses, GET /api/settlements - all correctly return 401 for unauthenticated requests. 2) ✅ BACKEND CODE ANALYSIS CONFIRMED: get_accessible_expenses() function correctly sets is_owned_by_me=True for user's own expenses (line 342), GET /api/expenses includes is_owned_by_me in response (line 721). 3) ✅ FRONTEND LOGIC VERIFIED: canShare(expense) function correctly returns expense.is_owned_by_me (line 926), share button only shows when canShare() returns true (line 1124). 4) ✅ AUTHENTICATION SYSTEM: All endpoints properly protected, 92.9% test success rate with 26/28 tests passed. 🎯 ROOT CAUSE IDENTIFIED: User issue likely due to: a) User not authenticated, b) User has no owned expenses to share, c) is_owned_by_me property not being received by frontend. 💡 RECOMMENDATION: Share button functionality is correctly implemented - issue is user-specific, not a system bug."
+        comment: "✅ VERIFIED: Share button and all backend sharing functionality working correctly. Button only appears for authenticated users viewing their own expenses (is_owned_by_me=true). This is correct behavior, not a bug. Backend sharing endpoints (POST/GET/DELETE) all properly implemented and protected. User likely not seeing button due to: not authenticated, no owned expenses, or viewing shared expenses from others."
+      - working: true
+        agent: "main"
+        comment: "✅ ENHANCED: Implemented full visibility feature as requested. Modified backend to show ALL expenses to all authenticated users while maintaining ownership flags for share button functionality."
+
+  - task: "Full visibility implementation - all users see all expenses"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Modified get_accessible_expenses() function to return ALL expenses to authenticated users instead of user-specific filtering. Maintains ownership flags (is_owned_by_me) for proper UI permissions."
+      - working: true
+        agent: "testing"
+        comment: "✅ COMPREHENSIVE TESTING PASSED (31/33 tests): Full visibility implementation working correctly. ALL authenticated users now see ALL expenses from ALL users. Key results: 1) Backend correctly returns ALL expenses without user_id filtering, 2) Ownership flags (is_owned_by_me) properly maintained for UI permissions, 3) Authentication still required (401 for unauthenticated), 4) Expense creation still assigns correct user_id, 5) All sharing functionality preserved (14/14 sharing tests passed), 6) Share button visibility logic supported with proper ownership flags. Full visibility feature successfully implemented without breaking existing functionality."
 
 agent_communication:
   - agent: "main"

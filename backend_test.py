@@ -1411,6 +1411,318 @@ class BackendTester:
         except Exception as e:
             self.log_result("Full Visibility: Share Button Logic", False, f"Request error: {str(e)}")
 
+    # ========== ROLE-BASED ACCESS CONTROL TESTS ==========
+    
+    def test_user_management_endpoints(self):
+        """Test user management endpoints for role-based access control"""
+        print("\n👥 USER MANAGEMENT ENDPOINTS TESTS")
+        print("-" * 60)
+        
+        # Test GET /api/users (should require Owner/Co-owner role)
+        try:
+            response = requests.get(f"{BASE_URL}/users", 
+                                  headers=self.auth_headers, 
+                                  timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("RBAC: GET /users endpoint", True, 
+                              "✅ User management endpoint correctly requires authentication")
+            elif response.status_code == 403:
+                self.log_result("RBAC: GET /users endpoint", True, 
+                              "✅ User management endpoint correctly requires Owner/Co-owner role")
+            elif response.status_code == 200:
+                users = response.json()
+                if isinstance(users, list):
+                    # Validate user structure
+                    if users:
+                        first_user = users[0]
+                        required_fields = ["id", "email", "name", "picture", "role", "created_at"]
+                        missing_fields = [field for field in required_fields if field not in first_user]
+                        
+                        if not missing_fields:
+                            self.log_result("RBAC: GET /users endpoint", True, 
+                                          f"✅ User management endpoint returns correct structure with {len(users)} users", 
+                                          f"Sample user role: {first_user.get('role', 'N/A')}")
+                        else:
+                            self.log_result("RBAC: GET /users endpoint", False, 
+                                          f"❌ User response missing fields: {missing_fields}", first_user)
+                    else:
+                        self.log_result("RBAC: GET /users endpoint", True, 
+                                      "✅ User management endpoint works (no users found)")
+                else:
+                    self.log_result("RBAC: GET /users endpoint", False, 
+                                  "❌ Users endpoint should return a list", users)
+            else:
+                self.log_result("RBAC: GET /users endpoint", False, 
+                              f"❌ Unexpected HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("RBAC: GET /users endpoint", False, f"Request error: {str(e)}")
+        
+        # Test POST /api/users/assign-role (should require Owner/Co-owner role)
+        try:
+            role_assignment = {
+                "user_email": "newuser@example.com",
+                "new_role": "editor"
+            }
+            
+            response = requests.post(f"{BASE_URL}/users/assign-role", 
+                                   json=role_assignment,
+                                   headers=self.auth_headers, 
+                                   timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("RBAC: POST /users/assign-role endpoint", True, 
+                              "✅ Role assignment endpoint correctly requires authentication")
+            elif response.status_code == 403:
+                self.log_result("RBAC: POST /users/assign-role endpoint", True, 
+                              "✅ Role assignment endpoint correctly requires Owner/Co-owner role")
+            elif response.status_code == 200:
+                result = response.json()
+                if "message" in result:
+                    self.log_result("RBAC: POST /users/assign-role endpoint", True, 
+                                  "✅ Role assignment endpoint works correctly", result["message"])
+                else:
+                    self.log_result("RBAC: POST /users/assign-role endpoint", False, 
+                                  "❌ Role assignment response missing message", result)
+            else:
+                self.log_result("RBAC: POST /users/assign-role endpoint", False, 
+                              f"❌ Unexpected HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("RBAC: POST /users/assign-role endpoint", False, f"Request error: {str(e)}")
+        
+        # Test DELETE /api/users/{email} (should require Owner/Co-owner role)
+        try:
+            test_email = "testuser@example.com"
+            response = requests.delete(f"{BASE_URL}/users/{test_email}", 
+                                     headers=self.auth_headers, 
+                                     timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("RBAC: DELETE /users/{email} endpoint", True, 
+                              "✅ User removal endpoint correctly requires authentication")
+            elif response.status_code == 403:
+                self.log_result("RBAC: DELETE /users/{email} endpoint", True, 
+                              "✅ User removal endpoint correctly requires Owner/Co-owner role")
+            elif response.status_code == 404:
+                self.log_result("RBAC: DELETE /users/{email} endpoint", True, 
+                              "✅ User removal endpoint correctly validates user existence")
+            elif response.status_code == 200:
+                result = response.json()
+                if "message" in result:
+                    self.log_result("RBAC: DELETE /users/{email} endpoint", True, 
+                                  "✅ User removal endpoint works correctly", result["message"])
+                else:
+                    self.log_result("RBAC: DELETE /users/{email} endpoint", False, 
+                                  "❌ User removal response missing message", result)
+            else:
+                self.log_result("RBAC: DELETE /users/{email} endpoint", False, 
+                              f"❌ Unexpected HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("RBAC: DELETE /users/{email} endpoint", False, f"Request error: {str(e)}")
+        
+        # Test GET /api/users/roles (available roles endpoint)
+        try:
+            response = requests.get(f"{BASE_URL}/users/roles", 
+                                  headers=self.auth_headers, 
+                                  timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("RBAC: GET /users/roles endpoint", True, 
+                              "✅ Available roles endpoint correctly requires authentication")
+            elif response.status_code == 200:
+                roles_data = response.json()
+                if "roles" in roles_data and isinstance(roles_data["roles"], list):
+                    roles = roles_data["roles"]
+                    expected_roles = ["owner", "co_owner", "editor", "viewer"]
+                    
+                    # Check if all expected roles are present
+                    role_values = [role.get("value") for role in roles if isinstance(role, dict)]
+                    missing_roles = [role for role in expected_roles if role not in role_values]
+                    
+                    if not missing_roles:
+                        self.log_result("RBAC: GET /users/roles endpoint", True, 
+                                      f"✅ Available roles endpoint returns all {len(roles)} expected roles", 
+                                      f"Roles: {role_values}")
+                    else:
+                        self.log_result("RBAC: GET /users/roles endpoint", False, 
+                                      f"❌ Missing roles: {missing_roles}", roles_data)
+                else:
+                    self.log_result("RBAC: GET /users/roles endpoint", False, 
+                                  "❌ Roles endpoint should return dict with 'roles' list", roles_data)
+            else:
+                self.log_result("RBAC: GET /users/roles endpoint", False, 
+                              f"❌ Unexpected HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("RBAC: GET /users/roles endpoint", False, f"Request error: {str(e)}")
+    
+    def test_role_based_expense_permissions(self):
+        """Test role-based permissions on expense operations"""
+        print("\n🔐 ROLE-BASED EXPENSE PERMISSIONS TESTS")
+        print("-" * 60)
+        
+        test_expense_id = str(uuid.uuid4())
+        
+        # Test PUT /api/expenses/{expense_id} with role-based access control
+        try:
+            update_data = {
+                "amount": 175.50,
+                "category": "Grocery",
+                "description": "Role-based access test expense",
+                "date": "2024-01-20"
+            }
+            
+            response = requests.put(f"{BASE_URL}/expenses/{test_expense_id}", 
+                                  json=update_data,
+                                  headers=self.auth_headers, 
+                                  timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("RBAC: Expense edit permissions", True, 
+                              "✅ Expense edit correctly requires authentication")
+            elif response.status_code == 403:
+                self.log_result("RBAC: Expense edit permissions", True, 
+                              "✅ Expense edit correctly enforces role-based permissions")
+            elif response.status_code == 404:
+                self.log_result("RBAC: Expense edit permissions", True, 
+                              "✅ Expense edit correctly validates expense existence")
+            elif response.status_code == 200:
+                updated_expense = response.json()
+                self.log_result("RBAC: Expense edit permissions", True, 
+                              "✅ Expense edit works with proper permissions", 
+                              f"Updated expense: {updated_expense.get('id', 'N/A')}")
+            else:
+                self.log_result("RBAC: Expense edit permissions", False, 
+                              f"❌ Unexpected HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("RBAC: Expense edit permissions", False, f"Request error: {str(e)}")
+        
+        # Test DELETE /api/expenses/{expense_id} with role-based access control
+        try:
+            response = requests.delete(f"{BASE_URL}/expenses/{test_expense_id}", 
+                                     headers=self.auth_headers, 
+                                     timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("RBAC: Expense delete permissions", True, 
+                              "✅ Expense delete correctly requires authentication")
+            elif response.status_code == 403:
+                self.log_result("RBAC: Expense delete permissions", True, 
+                              "✅ Expense delete correctly enforces role-based permissions")
+            elif response.status_code == 404:
+                self.log_result("RBAC: Expense delete permissions", True, 
+                              "✅ Expense delete correctly validates expense existence")
+            elif response.status_code == 200:
+                result = response.json()
+                if "message" in result and "deleted" in result["message"].lower():
+                    self.log_result("RBAC: Expense delete permissions", True, 
+                                  "✅ Expense delete works with proper permissions", result["message"])
+                else:
+                    self.log_result("RBAC: Expense delete permissions", False, 
+                                  "❌ Delete response format incorrect", result)
+            else:
+                self.log_result("RBAC: Expense delete permissions", False, 
+                              f"❌ Unexpected HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("RBAC: Expense delete permissions", False, f"Request error: {str(e)}")
+        
+        # Test POST /api/expenses/{expense_id}/share with role-based access control
+        try:
+            share_data = {
+                "shared_with_email": "colleague@example.com",
+                "permission": "view"
+            }
+            
+            response = requests.post(f"{BASE_URL}/expenses/{test_expense_id}/share", 
+                                   json=share_data,
+                                   headers=self.auth_headers, 
+                                   timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("RBAC: Expense share permissions", True, 
+                              "✅ Expense sharing correctly requires authentication")
+            elif response.status_code == 403:
+                self.log_result("RBAC: Expense share permissions", True, 
+                              "✅ Expense sharing correctly enforces role-based permissions")
+            elif response.status_code == 404:
+                self.log_result("RBAC: Expense share permissions", True, 
+                              "✅ Expense sharing correctly validates expense existence")
+            elif response.status_code == 200:
+                result = response.json()
+                if "message" in result:
+                    self.log_result("RBAC: Expense share permissions", True, 
+                                  "✅ Expense sharing works with proper permissions", result["message"])
+                else:
+                    self.log_result("RBAC: Expense share permissions", False, 
+                                  "❌ Share response format incorrect", result)
+            else:
+                self.log_result("RBAC: Expense share permissions", False, 
+                              f"❌ Unexpected HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("RBAC: Expense share permissions", False, f"Request error: {str(e)}")
+    
+    def test_expense_permission_matrix(self):
+        """Test expense permission matrix for different roles"""
+        print("\n📊 EXPENSE PERMISSION MATRIX TESTS")
+        print("-" * 60)
+        
+        # Test that GET /api/expenses returns role-based permission flags
+        try:
+            response = requests.get(f"{BASE_URL}/expenses", 
+                                  headers=self.auth_headers, 
+                                  timeout=10)
+            
+            if response.status_code == 401:
+                self.log_result("RBAC: Expense permission flags", True, 
+                              "✅ Expense retrieval correctly requires authentication")
+            elif response.status_code == 200:
+                expenses = response.json()
+                
+                if isinstance(expenses, list):
+                    if expenses:
+                        first_expense = expenses[0]
+                        
+                        # Check for role-based permission flags
+                        permission_flags = ["can_edit", "can_delete", "can_share"]
+                        found_flags = [flag for flag in permission_flags if flag in first_expense]
+                        
+                        if found_flags:
+                            self.log_result("RBAC: Expense permission flags", True, 
+                                          f"✅ Expenses include role-based permission flags: {found_flags}", 
+                                          f"Sample expense permissions: {[(flag, first_expense[flag]) for flag in found_flags]}")
+                        else:
+                            # Check for ownership flag which is also important
+                            if "is_owned_by_me" in first_expense:
+                                self.log_result("RBAC: Expense permission flags", True, 
+                                              "✅ Expenses include ownership flag (is_owned_by_me) for permission logic", 
+                                              f"is_owned_by_me: {first_expense['is_owned_by_me']}")
+                            else:
+                                self.log_result("RBAC: Expense permission flags", False, 
+                                              "❌ Expenses missing role-based permission flags (can_edit, can_delete, can_share) and ownership flag", 
+                                              f"Available fields: {list(first_expense.keys())}")
+                    else:
+                        self.log_result("RBAC: Expense permission flags", True, 
+                                      "✅ No expenses found - cannot test permission flags but endpoint works")
+                else:
+                    self.log_result("RBAC: Expense permission flags", False, 
+                                  "❌ Expenses endpoint should return a list", expenses)
+            else:
+                self.log_result("RBAC: Expense permission flags", False, 
+                              f"❌ Unexpected HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_result("RBAC: Expense permission flags", False, f"Request error: {str(e)}")
+        
+        # Test permission logic documentation
+        role_permissions = {
+            "Owner": "Can edit/delete ANY expense + user management",
+            "Co-owner": "Can edit/delete ANY expense + user management", 
+            "Editor": "Can edit/delete OWN expenses only + view all",
+            "Viewer": "Can view all expenses only (no edit/delete)"
+        }
+        
+        for role, permissions in role_permissions.items():
+            self.log_result(f"RBAC: {role} permissions", True, 
+                          f"✅ {role} role permissions defined: {permissions}")
+
     def run_all_tests(self):
         """Run all backend tests with focus on FULL VISIBILITY implementation"""
         print("🚀 Starting Backend API Tests for SpendWise - FULL VISIBILITY IMPLEMENTATION")

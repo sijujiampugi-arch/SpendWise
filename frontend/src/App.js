@@ -996,15 +996,18 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
   };
 
   const canEdit = (expense) => {
-    return expense.is_owned_by_me || expense.shared_permission === 'edit';
+    // Use backend role-based permissions if available, fallback to old logic
+    return expense.can_edit !== undefined ? expense.can_edit : (expense.is_owned_by_me || expense.shared_permission === 'edit');
   };
 
   const canShare = (expense) => {
-    return expense.is_owned_by_me; // Only owners can share
+    // Use backend role-based permissions if available, fallback to old logic
+    return expense.can_share !== undefined ? expense.can_share : expense.is_owned_by_me;
   };
 
   const canDelete = (expense) => {
-    return expense.is_owned_by_me; // Only owners can delete
+    // Use backend role-based permissions if available, fallback to old logic
+    return expense.can_delete !== undefined ? expense.can_delete : expense.is_owned_by_me;
   };
 
   const handleDelete = async (expenseId) => {

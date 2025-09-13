@@ -2563,16 +2563,19 @@ class BackendTester:
         print("=" * 60)
 
     def run_all_tests(self):
-        """Run all backend tests with focus on FULL VISIBILITY implementation"""
-        print("🚀 Starting Backend API Tests for SpendWise - FULL VISIBILITY IMPLEMENTATION")
+        """Run all backend tests with focus on CRITICAL BUG FIXES VERIFICATION"""
+        print("🚀 Starting Backend API Tests for SpendWise - CRITICAL BUG FIXES VERIFICATION")
         print(f"📡 Testing API at: {BASE_URL}")
-        print("🔍 Focus: Full visibility implementation - all users see ALL expenses")
+        print("🔍 Focus: Verifying critical bug fixes for User Management and Shared Expenses Deletion")
         print("=" * 80)
         
         # Setup mock authentication for testing
         self.setup_mock_authentication()
         
-        # CRITICAL BUG TEST FIRST - Shared Expense Deletion Issue
+        # PRIORITY: Critical Bug Fixes Verification
+        self.test_critical_bug_fixes_verification()
+        
+        # CRITICAL BUG TEST - Shared Expense Deletion Issue (Legacy)
         self.test_critical_shared_expense_deletion_bug()
         self.test_shared_expense_deletion_bug()
         

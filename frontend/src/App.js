@@ -1290,7 +1290,19 @@ const SharedExpenses = ({ user, onExpenseAdded, refreshTrigger }) => {
 
   return (
     <div className="shared-expenses">
-      <h2>Shared Expenses & Settlements</h2>
+      <div className="shared-expenses-header">
+        <h2>Shared Expenses & Settlements</h2>
+        <button 
+          onClick={() => {
+            console.log('Manual refresh triggered');
+            loadSharedData();
+          }}
+          className="refresh-button"
+          disabled={loading}
+        >
+          🔄 Refresh
+        </button>
+      </div>
       
       {/* Settlements Section */}
       <div className="settlements-section">

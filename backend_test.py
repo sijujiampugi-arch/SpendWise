@@ -2077,7 +2077,10 @@ class BackendTester:
         # Setup mock authentication for testing
         self.setup_mock_authentication()
         
-        # CRITICAL BUG TEST FIRST - Owner Delete Issue
+        # CRITICAL BUG TEST FIRST - Shared Expense Deletion Issue
+        self.test_shared_expense_deletion_bug()
+        
+        # CRITICAL BUG TEST - Owner Delete Issue
         self.test_owner_delete_critical_bug()
         
         # Run basic connectivity tests first

@@ -1254,9 +1254,20 @@ const SharedExpenses = ({ user, onExpenseAdded, refreshTrigger }) => {
   // Refresh data when refreshTrigger changes (when expenses are modified/deleted from other tabs)
   useEffect(() => {
     if (refreshTrigger) {
+      console.log('SharedExpenses: Refreshing due to data changes');
       loadSharedData();
     }
   }, [refreshTrigger]);
+
+  // Also refresh when this component becomes active (tab switching)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Refresh every 30 seconds to catch any missed updates
+      loadSharedData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const loadSharedData = async () => {
     setLoading(true);

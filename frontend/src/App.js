@@ -807,6 +807,14 @@ const AddExpense = ({ categories, onExpenseAdded, user }) => {
 
 // Expenses List Component
 const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    amount: '',
+    category: '',
+    description: '',
+    date: ''
+  });
+
   const getCategoryIcon = (categoryName) => {
     const category = categories.find(cat => cat.name === categoryName);
     return category ? category.icon : '📦';
@@ -815,6 +823,44 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
   const getCategoryColor = (categoryName) => {
     const category = categories.find(cat => cat.name === categoryName);
     return category ? category.color : '#8E8E93';
+  };
+
+  const handleEdit = (expense) => {
+    setEditingExpense(expense.id);
+    setEditFormData({
+      amount: expense.amount.toString(),
+      category: expense.category,
+      description: expense.description,
+      date: expense.date
+    });
+  };
+
+  const handleSaveEdit = async (expenseId) => {
+    try {
+      console.log('Saving expense edit:', editFormData);
+      
+      const updateData = {
+        amount: parseFloat(editFormData.amount),
+        category: editFormData.category,
+        description: editFormData.description,
+        date: editFormData.date
+      };
+
+      await axios.put(`${API}/expenses/${expenseId}`, updateData, { withCredentials: true });
+      
+      setEditingExpense(null);
+      setEditFormData({ amount: '', category: '', description: '', date: '' });
+      onExpenseDeleted(); // Refresh the data
+      alert('Expense updated successfully!');
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      alert(error.response?.data?.detail || 'Error updating expense');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingExpense(null);
+    setEditFormData({ amount: '', category: '', description: '', date: '' });
   };
 
   const handleDelete = async (expenseId) => {

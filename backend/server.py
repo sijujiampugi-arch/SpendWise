@@ -691,61 +691,201 @@ async def get_available_roles(user: User = Depends(require_auth)):
     }
 
 # Category Routes
-@api_router.get("/categories", response_model=List[CategoryInfo])
+@api_router.get("/categories", response_model=List[CategoryResponse])
 async def get_categories(user: User = Depends(require_auth)):
-    """Get all categories (system + custom)"""
+    """Get all available categories (system defaults + custom)"""
     try:
-        # Get all categories (system + user's custom categories)
-        categories = await db.categories.find({
-            "$or": [
-                {"is_system": True},
-                {"created_by": user.id}
-            ]
-        }).to_list(length=None)
+        # Define system default categories
+        system_categories = [
+            {"id": "system_dining", "name": "Dining Out", "emoji": "🍽️", "color": "#FF6B6B", "is_system": True},
+            {"id": "system_grocery", "name": "Grocery", "emoji": "🛒", "color": "#4ECDC4", "is_system": True},
+            {"id": "system_fuel", "name": "Fuel", "emoji": "⛽", "color": "#45B7D1", "is_system": True},
+            {"id": "system_transport", "name": "Transportation", "emoji": "🚗", "color": "#96CEB4", "is_system": True},
+            {"id": "system_shopping", "name": "Shopping", "emoji": "🛍️", "color": "#FFEAA7", "is_system": True},
+            {"id": "system_bills", "name": "Bills & Utilities", "emoji": "💡", "color": "#DDA0DD", "is_system": True},
+            {"id": "system_healthcare", "name": "Healthcare", "emoji": "⚕️", "color": "#98D8C8", "is_system": True},
+            {"id": "system_entertainment", "name": "Entertainment", "emoji": "🎬", "color": "#F7DC6F", "is_system": True},
+        ]
         
+        # Get custom categories
+        custom_categories = await db.categories.find({}).to_list(length=None)
+        
+        # Convert to response format
         result = []
-        for cat in categories:
-            result.append(CategoryInfo(
-                name=cat["name"],
-                color=cat["color"],
-                emoji=cat["emoji"]
+        
+        # Add system categories
+        for sys_cat in system_categories:
+            result.append(CategoryResponse(
+                id=sys_cat["id"],
+                name=sys_cat["name"],
+                emoji=sys_cat["emoji"],
+                color=sys_cat["color"],
+                is_system=sys_cat["is_system"],
+                created_at=datetime.now(timezone.utc)
+            ))
+        
+        # Add custom categories
+        for cat_data in custom_categories:
+            category = parse_from_mongo(cat_data)
+            result.append(CategoryResponse(
+                id=category["id"],
+                name=category["name"],
+                emoji=category.get("emoji", "📝"),
+                color=category.get("color", "#007AFF"),
+                is_system=False,
+                created_by=category.get("created_by"),
+                created_at=category["created_at"]
             ))
         
         return result
     except Exception as e:
+        logging.error(f"Error getting categories: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
-@api_router.post("/categories", response_model=CustomCategory)
-async def create_custom_category(category_data: CustomCategoryCreate, user: User = Depends(require_auth)):
-    """Create a new custom category"""
+@api_router.post("/categories", response_model=CategoryResponse)
+async def create_category(category_data: CustomCategoryCreate, admin_user: User = Depends(require_admin_role)):
+    """Create a new custom category (Owner/Co-owner only)"""
     try:
-        # Check if category name already exists for this user or as system category
-        existing = await db.categories.find_one({
-            "name": category_data.name,
-            "$or": [
-                {"is_system": True},
-                {"created_by": user.id}
-            ]
-        })
+        logging.info(f"Creating category by user {admin_user.email} (role: {admin_user.role}): {category_data.dict()}")
         
+        # Validate category name is unique
+        existing = await db.categories.find_one({"name": category_data.name})
         if existing:
             raise HTTPException(status_code=400, detail="Category name already exists")
         
-        custom_category = CustomCategory(
+        # Create new category
+        new_category = CustomCategory(
             name=category_data.name,
-            color=category_data.color,
             emoji=category_data.emoji,
-            created_by=user.id,
-            is_system=False
+            color=category_data.color,
+            created_by=admin_user.id
         )
         
-        await db.categories.insert_one(prepare_for_mongo(custom_category.dict()))
-        return custom_category
+        await db.categories.insert_one(prepare_for_mongo(new_category.dict()))
         
+        return CategoryResponse(
+            id=new_category.id,
+            name=new_category.name,
+            emoji=new_category.emoji,
+            color=new_category.color,
+            is_system=False,
+            created_by=new_category.created_by,
+            created_at=new_category.created_at
+        )
     except HTTPException:
         raise
     except Exception as e:
+        logging.error(f"Error creating category: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.put("/categories/{category_id}", response_model=CategoryResponse)
+async def update_category(category_id: str, category_data: CustomCategoryUpdate, admin_user: User = Depends(require_admin_role)):
+    """Update a custom category (Owner/Co-owner only, cannot edit system categories)"""
+    try:
+        logging.info(f"Updating category {category_id} by user {admin_user.email} (role: {admin_user.role})")
+        
+        # Check if it's a system category
+        if category_id.startswith("system_"):
+            raise HTTPException(status_code=403, detail="Cannot edit system categories")
+        
+        # Get existing category
+        existing_category = await db.categories.find_one({"id": category_id})
+        if not existing_category:
+            raise HTTPException(status_code=404, detail="Category not found")
+        
+        # Check if new name conflicts (if name is being updated)
+        if category_data.name and category_data.name != existing_category["name"]:
+            name_conflict = await db.categories.find_one({"name": category_data.name})
+            if name_conflict:
+                raise HTTPException(status_code=400, detail="Category name already exists")
+        
+        # Build update data
+        update_data = {}
+        if category_data.name is not None:
+            update_data["name"] = category_data.name
+        if category_data.emoji is not None:
+            update_data["emoji"] = category_data.emoji
+        if category_data.color is not None:
+            update_data["color"] = category_data.color
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
+        # Update category
+        await db.categories.update_one({"id": category_id}, {"$set": update_data})
+        
+        # Get updated category
+        updated_category = await db.categories.find_one({"id": category_id})
+        if not updated_category:
+            raise HTTPException(status_code=404, detail="Updated category not found")
+        
+        category = parse_from_mongo(updated_category)
+        return CategoryResponse(
+            id=category["id"],
+            name=category["name"],
+            emoji=category.get("emoji", "📝"),
+            color=category.get("color", "#007AFF"),
+            is_system=False,
+            created_by=category.get("created_by"),
+            created_at=category["created_at"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating category: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.delete("/categories/{category_id}")
+async def delete_category(category_id: str, admin_user: User = Depends(require_admin_role)):
+    """Delete a custom category (Owner/Co-owner only, cannot delete system categories)"""
+    try:
+        logging.info(f"Deleting category {category_id} by user {admin_user.email} (role: {admin_user.role})")
+        
+        # Check if it's a system category
+        if category_id.startswith("system_"):
+            raise HTTPException(status_code=403, detail="Cannot delete system categories")
+        
+        # Check if category exists
+        existing_category = await db.categories.find_one({"id": category_id})
+        if not existing_category:
+            raise HTTPException(status_code=404, detail="Category not found")
+        
+        # Check if category is being used by any expenses
+        expenses_using_category = await db.expenses.find_one({"category": existing_category["name"]})
+        if expenses_using_category:
+            raise HTTPException(status_code=400, detail="Cannot delete category that is being used by expenses")
+        
+        # Delete category
+        result = await db.categories.delete_one({"id": category_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Category not found")
+        
+        return {"message": f"Category '{existing_category['name']}' deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting category: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.get("/categories/colors")
+async def get_color_palette(user: User = Depends(require_auth)):
+    """Get preset color palette for categories"""
+    return {
+        "colors": [
+            {"name": "Red", "value": "#FF6B6B"},
+            {"name": "Orange", "value": "#FF8E53"},
+            {"name": "Yellow", "value": "#FFEAA7"},
+            {"name": "Green", "value": "#00B894"},
+            {"name": "Teal", "value": "#4ECDC4"},
+            {"name": "Blue", "value": "#007AFF"},
+            {"name": "Indigo", "value": "#6C5CE7"},
+            {"name": "Purple", "value": "#A29BFE"},
+            {"name": "Pink", "value": "#FD79A8"},
+            {"name": "Brown", "value": "#8D6E63"},
+            {"name": "Gray", "value": "#6C757D"},
+            {"name": "Dark", "value": "#2D3436"}
+        ]
+    }
 
 # Expense Routes
 @api_router.get("/")

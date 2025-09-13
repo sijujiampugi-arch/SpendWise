@@ -697,6 +697,9 @@ async def get_expense_stats(
         
         return ExpenseStats(
             total_expenses=total_expenses,
+            total_individual_expenses=total_individual_expenses,
+            total_shared_expenses=total_shared_expenses,
+            shared_expense_count=shared_expense_count,
             category_breakdown=category_breakdown,
             monthly_trend=monthly_trend,
             top_category=top_category,

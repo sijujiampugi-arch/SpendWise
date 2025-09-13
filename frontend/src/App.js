@@ -1161,11 +1161,11 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
                         <select
                           value={editFormData.category}
                           onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
-                          className="edit-form-select"
+                          className="edit-form-select category-select"
                         >
-                          {categories.map(cat => (
-                            <option key={cat.name} value={cat.name}>
-                              {cat.icon} {cat.name}
+                          {allCategories.map(cat => (
+                            <option key={cat.id} value={cat.name} style={{ color: cat.color }}>
+                              {cat.emoji} {cat.name} {cat.is_system ? '' : '(Custom)'}
                             </option>
                           ))}
                         </select>

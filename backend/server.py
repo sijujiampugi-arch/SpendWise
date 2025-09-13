@@ -714,12 +714,13 @@ async def get_expenses(
             
             # Add additional fields for sharing info
             if hasattr(expense_obj, '__dict__'):
+                # Always include is_owned_by_me (True or False) for frontend canEdit/canDelete logic
+                expense_obj.__dict__["is_owned_by_me"] = expense.get("is_owned_by_me", False)
+                
                 if expense.get("shared_permission"):
                     expense_obj.__dict__["shared_permission"] = expense["shared_permission"]
                 if expense.get("is_shared_with_me"):
                     expense_obj.__dict__["is_shared_with_me"] = True
-                if expense.get("is_owned_by_me"):
-                    expense_obj.__dict__["is_owned_by_me"] = True
             
             result.append(expense_obj)
         

@@ -1235,7 +1235,7 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
 };
 
 // Shared Expenses Component
-const SharedExpenses = ({ user, onExpenseAdded }) => {
+const SharedExpenses = ({ user, onExpenseAdded, refreshTrigger }) => {
   const [sharedExpenses, setSharedExpenses] = useState([]);
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1243,6 +1243,13 @@ const SharedExpenses = ({ user, onExpenseAdded }) => {
   useEffect(() => {
     loadSharedData();
   }, []);
+
+  // Refresh data when refreshTrigger changes (when expenses are modified/deleted from other tabs)
+  useEffect(() => {
+    if (refreshTrigger) {
+      loadSharedData();
+    }
+  }, [refreshTrigger]);
 
   const loadSharedData = async () => {
     setLoading(true);

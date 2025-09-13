@@ -869,6 +869,67 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
     setEditFormData({ amount: '', category: '', description: '', date: '' });
   };
 
+  const handleShare = async (expense) => {
+    setSharingExpense(expense.id);
+    setShareFormData({ email: '', permission: 'view' });
+    
+    // Load existing shares
+    try {
+      const response = await axios.get(`${API}/expenses/${expense.id}/shares`, { withCredentials: true });
+      setExpenseShares({ ...expenseShares, [expense.id]: response.data.shares });
+    } catch (error) {
+      console.error('Error loading shares:', error);
+    }
+  };
+
+  const handleSaveShare = async (expenseId) => {
+    try {
+      await axios.post(`${API}/expenses/${expenseId}/share`, shareFormData, { withCredentials: true });
+      
+      // Reload shares
+      const response = await axios.get(`${API}/expenses/${expenseId}/shares`, { withCredentials: true });
+      setExpenseShares({ ...expenseShares, [expenseId]: response.data.shares });
+      
+      setShareFormData({ email: '', permission: 'view' });
+      alert('Expense shared successfully!');
+    } catch (error) {
+      console.error('Error sharing expense:', error);
+      alert(error.response?.data?.detail || 'Error sharing expense');
+    }
+  };
+
+  const handleRemoveShare = async (expenseId, shareId) => {
+    try {
+      await axios.delete(`${API}/expenses/${expenseId}/shares/${shareId}`, { withCredentials: true });
+      
+      // Reload shares
+      const response = await axios.get(`${API}/expenses/${expenseId}/shares`, { withCredentials: true });
+      setExpenseShares({ ...expenseShares, [expenseId]: response.data.shares });
+      
+      alert('Share removed successfully!');
+    } catch (error) {
+      console.error('Error removing share:', error);
+      alert(error.response?.data?.detail || 'Error removing share');
+    }
+  };
+
+  const handleCancelShare = () => {
+    setSharingExpense(null);
+    setShareFormData({ email: '', permission: 'view' });
+  };
+
+  const canEdit = (expense) => {
+    return expense.is_owned_by_me || expense.shared_permission === 'edit';
+  };
+
+  const canShare = (expense) => {
+    return expense.is_owned_by_me; // Only owners can share
+  };
+
+  const canDelete = (expense) => {
+    return expense.is_owned_by_me; // Only owners can delete
+  };
+
   const handleDelete = async (expenseId) => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
       try {

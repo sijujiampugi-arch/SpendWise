@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
 import requests
-import asyncio
 import pandas as pd
 import io
 from datetime import datetime, date, timezone, timedelta
@@ -1001,7 +1000,7 @@ async def create_expense(expense_data: ExpenseCreate, user: User = Depends(requi
         
         else:
             # Create regular individual expense
-            logging.info(f"Creating individual expense")
+            logging.info("Creating individual expense")
             expense = Expense(**expense_data.dict(), user_id=user.id)
             expense_dict = prepare_for_mongo(expense.dict())
             await db.expenses.insert_one(expense_dict)
@@ -1304,7 +1303,7 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
             if deleted_shared.deleted_count > 0:
                 logging.info(f"✅ Strategy 1 SUCCESS: Deleted {deleted_shared.deleted_count} shared expense records")
             else:
-                logging.warning(f"⚠️ Strategy 1 FAILED: No matches found")
+                logging.warning("⚠️ Strategy 1 FAILED: No matches found")
                 
                 # Strategy 2: Match with original description (in case no prefix cleanup needed)
                 alt_filter_1 = {
@@ -1320,7 +1319,7 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
                 if deleted_alt_1.deleted_count > 0:
                     logging.info(f"✅ Strategy 2 SUCCESS: Deleted {deleted_alt_1.deleted_count} shared expense records")
                 else:
-                    logging.warning(f"⚠️ Strategy 2 FAILED: No matches with original description")
+                    logging.warning("⚠️ Strategy 2 FAILED: No matches with original description")
                     
                     # Strategy 3: Try matching by description only (ignore amount differences due to splitting)
                     alt_filter_2 = {
@@ -1335,7 +1334,7 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
                     if deleted_alt_2.deleted_count > 0:
                         logging.info(f"✅ Strategy 3 SUCCESS: Deleted {deleted_alt_2.deleted_count} shared expense records")
                     else:
-                        logging.warning(f"⚠️ Strategy 3 FAILED: No flexible matches found")
+                        logging.warning("⚠️ Strategy 3 FAILED: No flexible matches found")
                         
                         # Strategy 4: Last resort - show what's actually in the database for debugging
                         logging.warning("🔍 DEBUGGING: Showing all shared expenses for this user:")

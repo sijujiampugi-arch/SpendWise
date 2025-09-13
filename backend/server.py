@@ -840,17 +840,21 @@ async def preview_import(file: UploadFile = File(...), user: User = Depends(requ
 
 @api_router.post("/import/execute")
 async def execute_import(
+    request: Request,
     file: UploadFile = File(...),
-    column_mapping: str = Query(..., description="JSON string of column mappings"),
     user: User = Depends(require_auth)
 ):
     """Execute spreadsheet import with custom column mapping"""
     try:
         import json
         
-        # Parse column mapping
+        # Get column mapping from form data
+        form = await request.form()
+        if 'column_mapping' not in form:
+            raise HTTPException(status_code=400, detail="column_mapping is required")
+        
         try:
-            mapping = json.loads(column_mapping)
+            mapping = json.loads(form['column_mapping'])
         except json.JSONDecodeError:
             raise HTTPException(status_code=400, detail="Invalid column mapping JSON")
         

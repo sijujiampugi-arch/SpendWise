@@ -339,6 +339,21 @@ test_plan:
         agent: "testing"
         comment: "✅ COMPREHENSIVE TESTING PASSED (31/33 tests): Full visibility implementation working correctly. ALL authenticated users now see ALL expenses from ALL users. Key results: 1) Backend correctly returns ALL expenses without user_id filtering, 2) Ownership flags (is_owned_by_me) properly maintained for UI permissions, 3) Authentication still required (401 for unauthenticated), 4) Expense creation still assigns correct user_id, 5) All sharing functionality preserved (14/14 sharing tests passed), 6) Share button visibility logic supported with proper ownership flags. Full visibility feature successfully implemented without breaking existing functionality."
 
+  - task: "Edit and delete button functionality fix"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "User reported 'Edit and delete function for each expense was missing' after full visibility implementation. Frontend canEdit() and canDelete() functions depend on is_owned_by_me property from backend."
+      - working: true
+        agent: "testing"
+        comment: "✅ CRITICAL BUG FIXED: Found and resolved issue where is_owned_by_me property was being stripped from API responses. Root cause: GET /api/expenses endpoint was converting expense dictionaries to Expense objects, losing additional properties. Fix applied: Modified endpoint to return dictionaries instead of objects, preserving all ownership flags. Testing confirmed: 1) GET /api/expenses now returns ALL expenses with is_owned_by_me property, 2) PUT and DELETE endpoints working correctly for owned expenses, 3) Authentication properly enforced, 4) Frontend canEdit/canDelete logic now has required data. Edit and delete button functionality restored."
+
 agent_communication:
   - agent: "main"
     message: "Phase 1 complete: Authentication + Custom Categories implemented. Need to test auth flow, session management, and custom category creation before proceeding to shared expenses and spreadsheet import."

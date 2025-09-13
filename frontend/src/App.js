@@ -1127,10 +1127,21 @@ const ImportManager = ({ categories, onImportComplete }) => {
   };
 
   const handleImport = async () => {
-    if (!importFile || !previewData) return;
+    if (!importFile || !previewData) {
+      alert('Please select a file first');
+      return;
+    }
+
+    // Validate required column mappings
+    if (!columnMapping.amount || !columnMapping.description) {
+      alert('Please map the required columns (Amount and Description) before importing');
+      return;
+    }
 
     setImporting(true);
     try {
+      console.log('Starting import with mapping:', columnMapping);
+      
       const formData = new FormData();
       formData.append('file', importFile);
       formData.append('column_mapping', JSON.stringify(columnMapping));
@@ -1140,11 +1151,38 @@ const ImportManager = ({ categories, onImportComplete }) => {
         withCredentials: true
       });
 
+      console.log('Import response:', response.data);
       setImportResult(response.data);
+      
+      // Show success message
+      const result = response.data;
+      let message = `Import completed!\n`;
+      message += `✅ Successfully imported: ${result.successful} expenses\n`;
+      if (result.failed > 0) {
+        message += `❌ Failed: ${result.failed} expenses\n`;
+        message += `Check the results below for details.`;
+      }
+      
+      alert(message);
       onImportComplete();
+      
     } catch (error) {
       console.error('Error importing file:', error);
-      alert(error.response?.data?.detail || 'Error importing file');
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'Error importing file';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication required. Please log in first.';
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        errorMessage = `Import validation errors: ${errors.map(e => e.msg).join(', ')}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Import failed: ${errorMessage}\n\nPlease check the console for more details.`);
     }
     setImporting(false);
   };

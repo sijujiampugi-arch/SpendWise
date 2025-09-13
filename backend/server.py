@@ -1713,7 +1713,7 @@ async def execute_import(
                                 expense_date = pd.to_datetime(date_value).date()
                             else:
                                 expense_date = pd.to_datetime(date_value).date()
-                        except:
+                        except Exception:
                             # Use today's date if parsing fails
                             expense_date = date.today()
                 

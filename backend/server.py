@@ -463,7 +463,7 @@ async def initialize_system_categories():
                 system_category = CustomCategory(
                     name=category.value,
                     color=config["color"],
-                    icon=config["icon"],
+                    emoji=config["emoji"],
                     created_by="system",
                     is_system=True
                 )

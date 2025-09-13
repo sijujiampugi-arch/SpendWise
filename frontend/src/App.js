@@ -1198,13 +1198,25 @@ const ImportManager = ({ categories, onImportComplete }) => {
       <div className="import-section">
         <div className="file-upload-section">
           <h3>1. Select File</h3>
-          <input
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            onChange={handleFileSelect}
-            className="file-input"
-          />
-          <p className="file-help">Supported formats: CSV, Excel (.xlsx, .xls)</p>
+          {uploadingPreview ? (
+            <div className="uploading-state">
+              <div className="spinner"></div>
+              <p>Processing file...</p>
+            </div>
+          ) : (
+            <>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleFileSelect}
+                className="file-input"
+              />
+              <p className="file-help">Supported formats: CSV, Excel (.xlsx, .xls)</p>
+              {importFile && (
+                <p className="file-selected">Selected: {importFile.name}</p>
+              )}
+            </>
+          )}
         </div>
 
         {previewData && (

@@ -1092,6 +1092,7 @@ const ImportManager = ({ categories, onImportComplete }) => {
     setImportFile(file);
     setPreviewData(null);
     setImportResult(null);
+    setUploadingPreview(true);
 
     try {
       console.log('Uploading file for preview...');

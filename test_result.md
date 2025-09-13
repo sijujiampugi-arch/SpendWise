@@ -276,10 +276,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Share button visibility and functionality"
+    - "Full visibility implementation - all users see ALL expenses"
   stuck_tasks: []
   test_all: false
-  test_priority: "share_button_investigation"
+  test_priority: "full_visibility_verification"
 
   - task: "Spreadsheet import functionality (CSV/Excel)"
     implemented: true

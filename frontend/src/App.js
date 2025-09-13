@@ -1948,8 +1948,7 @@ const Settings = ({ user, users, availableRoles, onAssignRole, onRemoveUser, use
         )}
         
         {activeSettingsTab === 'categories' && (user?.role === 'owner' || user?.role === 'co_owner') && (
-          <CategoryManager 
-            user={user}
+          <CategoryManagement 
             categories={allCategories}
             colorPalette={colorPalette}
             loading={categoryLoading}

@@ -438,15 +438,15 @@ async def get_accessible_expenses(user: User, filter_query: dict) -> List[dict]:
 
 # Category configurations with Apple-like colors
 CATEGORY_CONFIG = {
-    ExpenseCategory.GROCERY: {"color": "#34C759", "icon": "🛒"},
-    ExpenseCategory.FUEL: {"color": "#FF9500", "icon": "⛽"},
-    ExpenseCategory.DINING_OUT: {"color": "#FF3B30", "icon": "🍽️"},
-    ExpenseCategory.SHOPPING: {"color": "#AF52DE", "icon": "🛍️"},
-    ExpenseCategory.BILLS: {"color": "#007AFF", "icon": "📋"},
-    ExpenseCategory.HEALTHCARE: {"color": "#FF2D92", "icon": "🏥"},
-    ExpenseCategory.ENTERTAINMENT: {"color": "#5AC8FA", "icon": "🎬"},
-    ExpenseCategory.TRANSPORT: {"color": "#FFCC02", "icon": "🚗"},
-    ExpenseCategory.OTHER: {"color": "#8E8E93", "icon": "📦"},
+    ExpenseCategory.GROCERY: {"color": "#34C759", "emoji": "🛒"},
+    ExpenseCategory.FUEL: {"color": "#FF9500", "emoji": "⛽"},
+    ExpenseCategory.DINING_OUT: {"color": "#FF3B30", "emoji": "🍽️"},
+    ExpenseCategory.SHOPPING: {"color": "#AF52DE", "emoji": "🛍️"},
+    ExpenseCategory.BILLS: {"color": "#007AFF", "emoji": "📋"},
+    ExpenseCategory.HEALTHCARE: {"color": "#FF2D92", "emoji": "🏥"},
+    ExpenseCategory.ENTERTAINMENT: {"color": "#5AC8FA", "emoji": "🎬"},
+    ExpenseCategory.TRANSPORT: {"color": "#FFCC02", "emoji": "🚗"},
+    ExpenseCategory.OTHER: {"color": "#8E8E93", "emoji": "📦"},
 }
 
 # Initialize system categories on startup

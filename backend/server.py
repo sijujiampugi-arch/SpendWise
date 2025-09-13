@@ -1054,12 +1054,25 @@ async def update_expense(expense_id: str, expense_data: ExpenseUpdate, user: Use
 
 @api_router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
-    """Delete an expense (only owner can delete)"""
+    """Delete an expense (role-based access control)"""
     try:
-        # Only owner can delete (not shared users)
-        result = await db.expenses.delete_one({"id": expense_id, "user_id": user.id})
+        logging.info(f"Delete request for expense {expense_id} by user {user.email} (role: {user.role})")
+        
+        # Get the expense first to check ownership
+        existing_expense = await db.expenses.find_one({"id": expense_id})
+        if not existing_expense:
+            raise HTTPException(status_code=404, detail="Expense not found")
+        
+        # Check role-based delete permissions
+        if not can_delete_expense(user, existing_expense["user_id"]):
+            raise HTTPException(status_code=403, detail="You don't have permission to delete this expense")
+        
+        logging.info(f"Delete permission granted for user {user.email} (role: {user.role}) on expense owned by {existing_expense['user_id']}")
+        
+        # Delete the expense
+        result = await db.expenses.delete_one({"id": expense_id})
         if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Expense not found or you don't have permission to delete it")
+            raise HTTPException(status_code=404, detail="Failed to delete expense")
         
         # Also delete any shares of this expense
         await db.expense_shares.delete_many({"expense_id": expense_id})

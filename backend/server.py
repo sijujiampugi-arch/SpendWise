@@ -172,6 +172,22 @@ class CustomCategoryCreate(BaseModel):
     color: str
     icon: str
 
+# Expense Sharing Models
+class ExpenseShare(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    expense_id: str
+    shared_with_email: str
+    permission: str  # "view" or "edit"
+    shared_by: str  # user_id who shared it
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ExpenseShareCreate(BaseModel):
+    shared_with_email: str
+    permission: str = Field(default="view", description="view or edit")
+
+class ExpenseShareUpdate(BaseModel):
+    permission: str = Field(description="view or edit")
+
 # Settlement Models
 class Settlement(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

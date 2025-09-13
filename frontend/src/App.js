@@ -380,6 +380,16 @@ function MainApp() {
               {currentView === 'import' && (
                 <ImportManager categories={categories} onImportComplete={loadData} />
               )}
+              {currentView === 'users' && (user?.role === 'owner' || user?.role === 'co_owner') && (
+                <UserManagement 
+                  users={users} 
+                  availableRoles={availableRoles}
+                  onAssignRole={assignUserRole}
+                  onRemoveUser={removeUser}
+                  loading={userManagementLoading}
+                  currentUser={user}
+                />
+              )}
             </>
           )}
         </main>

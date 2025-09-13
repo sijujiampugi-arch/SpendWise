@@ -194,8 +194,22 @@ class CustomCategory(BaseModel):
 
 class CustomCategoryCreate(BaseModel):
     name: str
+    color: str = "#007AFF"  # Default blue color
+    icon: str = "📝"
+
+class CustomCategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    color: Optional[str] = None
+    icon: Optional[str] = None
+
+class CategoryResponse(BaseModel):
+    id: str
+    name: str
     color: str
     icon: str
+    is_system: bool = False
+    created_by: Optional[str] = None
+    created_at: datetime
 
 # Expense Sharing Models
 class ExpenseShare(BaseModel):

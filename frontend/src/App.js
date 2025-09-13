@@ -178,6 +178,60 @@ function MainApp() {
     setDarkMode(!darkMode);
   };
 
+  // User management functions
+  const loadUsers = async () => {
+    setUserManagementLoading(true);
+    try {
+      const [usersRes, rolesRes] = await Promise.all([
+        axios.get(`${API}/users`, { withCredentials: true }),
+        axios.get(`${API}/users/roles`, { withCredentials: true })
+      ]);
+      setUsers(usersRes.data);
+      setAvailableRoles(rolesRes.data.roles);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      alert(error.response?.data?.detail || 'Error loading users');
+    }
+    setUserManagementLoading(false);
+  };
+
+  const assignUserRole = async (email, role) => {
+    try {
+      await axios.post(`${API}/users/assign-role`, {
+        user_email: email,
+        new_role: role
+      }, { withCredentials: true });
+      
+      alert(`Role assigned successfully to ${email}`);
+      loadUsers(); // Refresh users list
+    } catch (error) {
+      console.error('Error assigning role:', error);
+      alert(error.response?.data?.detail || 'Error assigning role');
+    }
+  };
+
+  const removeUser = async (email) => {
+    if (!window.confirm(`Are you sure you want to remove ${email} from the system? This will delete all their data.`)) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/users/${encodeURIComponent(email)}`, { withCredentials: true });
+      alert(`User ${email} removed successfully`);
+      loadUsers(); // Refresh users list
+    } catch (error) {
+      console.error('Error removing user:', error);
+      alert(error.response?.data?.detail || 'Error removing user');
+    }
+  };
+
+  // Load users when users tab is accessed
+  useEffect(() => {
+    if (currentView === 'users' && (user?.role === 'owner' || user?.role === 'co_owner')) {
+      loadUsers();
+    }
+  }, [currentView, user?.role]);
+
   return (
     <div className={`app ${darkMode ? 'dark' : 'light'}`}>
       <div className="app-container">

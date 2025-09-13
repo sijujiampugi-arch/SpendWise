@@ -443,7 +443,7 @@ function MainApp() {
                 <AddExpense categories={categories} allCategories={allCategories} onExpenseAdded={loadData} user={user} />
               )}
               {currentView === 'expenses' && (
-                <ExpensesList expenses={expenses} categories={categories} onExpenseDeleted={loadData} />
+                <ExpensesList expenses={expenses} categories={categories} allCategories={allCategories} onExpenseDeleted={loadData} />
               )}
               {currentView === 'shared' && (
                 <SharedExpenses 

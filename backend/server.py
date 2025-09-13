@@ -483,21 +483,32 @@ async def process_session_data(request: Request):
         existing_user = await db.users.find_one({"email": session_data["email"]})
         
         if not existing_user:
-            # Check if this is the first user (should be Owner)
+            # Check if this is the first user (should be Owner) or specific owner email
             user_count = await db.users.count_documents({})
+            
+            # Determine role: specific owner email or first user gets Owner role
+            user_role = UserRole.OWNER if (user_count == 0 or session_data["email"] == "sijujiampugi@gmail.com") else UserRole.VIEWER
             
             # Create new user
             new_user = User(
                 email=session_data["email"],
                 name=session_data["name"],
                 picture=session_data["picture"],
-                role=UserRole.OWNER if user_count == 0 else UserRole.VIEWER  # First user becomes Owner
+                role=user_role
             )
             await db.users.insert_one(prepare_for_mongo(new_user.dict()))
             user_id = new_user.id
             
             logging.info(f"Created new user {session_data['email']} with role {new_user.role} (user count was {user_count})")
         else:
+            # Check if existing user is the specific owner email and update role if needed
+            if session_data["email"] == "sijujiampugi@gmail.com" and existing_user.get("role") != UserRole.OWNER.value:
+                await db.users.update_one(
+                    {"email": session_data["email"]},
+                    {"$set": {"role": UserRole.OWNER.value}}
+                )
+                logging.info(f"Updated {session_data['email']} to Owner role")
+            
             user_id = existing_user["id"]
         
         # Create session with 7-day expiry

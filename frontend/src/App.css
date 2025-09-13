@@ -303,8 +303,22 @@ body {
 /* Period Selector */
 .period-selector {
   display: flex;
-  gap: var(--spacing-md);
+  flex-direction: column;
+  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-lg);
+  align-items: center;
+}
+
+.period-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  text-align: center;
+}
+
+.period-controls {
+  display: flex;
+  gap: var(--spacing-md);
   justify-content: center;
 }
 
@@ -318,6 +332,7 @@ body {
   cursor: pointer;
   outline: none;
   transition: all 0.2s ease;
+  min-width: 120px;
 }
 
 .period-select:focus {

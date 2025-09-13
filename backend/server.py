@@ -187,7 +187,7 @@ class CustomCategory(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     color: str
-    icon: str
+    emoji: str
     created_by: str  # user_id who created it
     is_system: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -195,18 +195,18 @@ class CustomCategory(BaseModel):
 class CustomCategoryCreate(BaseModel):
     name: str
     color: str = "#007AFF"  # Default blue color
-    icon: str = "📝"
+    emoji: str = "📝"
 
 class CustomCategoryUpdate(BaseModel):
     name: Optional[str] = None
     color: Optional[str] = None
-    icon: Optional[str] = None
+    emoji: Optional[str] = None
 
 class CategoryResponse(BaseModel):
     id: str
     name: str
     color: str
-    icon: str
+    emoji: str
     is_system: bool = False
     created_by: Optional[str] = None
     created_at: datetime

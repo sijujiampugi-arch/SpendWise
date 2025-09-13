@@ -808,12 +808,18 @@ const AddExpense = ({ categories, onExpenseAdded, user }) => {
 // Expenses List Component
 const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
   const [editingExpense, setEditingExpense] = useState(null);
+  const [sharingExpense, setSharingExpense] = useState(null);
   const [editFormData, setEditFormData] = useState({
     amount: '',
     category: '',
     description: '',
     date: ''
   });
+  const [shareFormData, setShareFormData] = useState({
+    email: '',
+    permission: 'view'
+  });
+  const [expenseShares, setExpenseShares] = useState({});
 
   const getCategoryIcon = (categoryName) => {
     const category = categories.find(cat => cat.name === categoryName);

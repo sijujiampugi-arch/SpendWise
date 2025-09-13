@@ -1899,6 +1899,14 @@ const Settings = ({ user, users, availableRoles, onAssignRole, onRemoveUser, use
             👥 User Management
           </button>
         )}
+        {(user?.role === 'owner' || user?.role === 'co_owner') && (
+          <button 
+            className={`settings-nav-button ${activeSettingsTab === 'categories' ? 'active' : ''}`}
+            onClick={() => setActiveSettingsTab('categories')}
+          >
+            🏷️ Category Management
+          </button>
+        )}
         <button 
           className={`settings-nav-button ${activeSettingsTab === 'about' ? 'active' : ''}`}
           onClick={() => setActiveSettingsTab('about')}

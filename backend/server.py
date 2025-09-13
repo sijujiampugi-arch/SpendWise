@@ -314,35 +314,36 @@ async def check_expense_access(expense_id: str, user: User, required_permission:
         return False
 
 async def get_accessible_expenses(user: User, filter_query: dict) -> List[dict]:
-    """Get expenses that user owns or has access to"""
+    """Get ALL expenses for full visibility across all users"""
     try:
-        # Get user's own expenses
-        own_expenses_query = {**filter_query, "user_id": user.id}
-        own_expenses = await db.expenses.find(own_expenses_query).to_list(length=None)
+        # Get ALL expenses (not just user-specific ones) for full visibility
+        all_expenses = await db.expenses.find(filter_query).to_list(length=None)
         
-        # Get shared expenses
+        # Get shares for this user to mark shared expenses
         shares = await db.expense_shares.find({"shared_with_email": user.email}).to_list(length=None)
         shared_expense_ids = [share["expense_id"] for share in shares]
         
-        if shared_expense_ids:
-            shared_filter = {**filter_query, "id": {"$in": shared_expense_ids}}
-            shared_expenses = await db.expenses.find(shared_filter).to_list(length=None)
+        # Process each expense to add proper flags
+        for expense in all_expenses:
+            # Mark if user owns this expense
+            if expense.get("user_id") == user.id:
+                expense["is_owned_by_me"] = True
+            else:
+                expense["is_owned_by_me"] = False
             
-            # Add sharing info to shared expenses
-            for expense in shared_expenses:
+            # Mark if expense is shared with this user
+            if expense["id"] in shared_expense_ids:
                 share = next((s for s in shares if s["expense_id"] == expense["id"]), None)
                 if share:
                     expense["shared_permission"] = share["permission"]
                     expense["is_shared_with_me"] = True
-        else:
-            shared_expenses = []
+            
+            # Check if expense has any shares (is shared with others)
+            expense_shares = await db.expense_shares.find({"expense_id": expense["id"]}).to_list(length=None)
+            if expense_shares:
+                expense["is_shared"] = True
         
-        # Mark own expenses
-        for expense in own_expenses:
-            expense["is_owned_by_me"] = True
-        
-        # Combine and sort
-        all_expenses = own_expenses + shared_expenses
+        # Sort by date (most recent first)
         all_expenses.sort(key=lambda x: x.get("date", ""), reverse=True)
         
         return all_expenses

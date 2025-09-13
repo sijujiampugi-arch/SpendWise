@@ -1111,18 +1111,25 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
         # CRITICAL FIX: Clean up related shared_expenses records
         # When deleting a shared expense from main expenses tab, we need to remove
         # the corresponding record from shared_expenses collection
-        if existing_expense.get("is_shared", False):
-            # For shared expenses, try to find and delete the related shared_expense record
-            # We'll match by user, amount, category, description, and date
-            original_description = existing_expense["description"]
+        original_description = existing_expense["description"]
+        is_shared_expense = existing_expense.get("is_shared", False)
+        has_shared_prefix = (original_description.startswith("[SHARED") or 
+                           "shared" in original_description.lower())
+        
+        logging.info(f"Shared expense cleanup check - is_shared: {is_shared_expense}, has_prefix: {has_shared_prefix}")
+        
+        # Check if this is a shared expense (either by flag OR by description pattern)
+        if is_shared_expense or has_shared_prefix:
+            logging.info("This is a shared expense - proceeding with shared_expenses cleanup")
             
             # Remove the [SHARED] or [SHARED - CREATED] prefix to get original description
+            clean_description = original_description
             if original_description.startswith("[SHARED - CREATED] "):
                 clean_description = original_description[19:]  # Remove "[SHARED - CREATED] "
             elif original_description.startswith("[SHARED] "):
                 clean_description = original_description[9:]   # Remove "[SHARED] "
-            else:
-                clean_description = original_description
+            
+            logging.info(f"Cleaning description from '{original_description}' to '{clean_description}'")
             
             # Find and delete matching shared expense records
             shared_expense_filter = {
@@ -1132,12 +1139,23 @@ async def delete_expense(expense_id: str, user: User = Depends(require_auth)):
                 "date": existing_expense["date"]
             }
             
+            logging.info(f"Searching for shared expense records with filter: {shared_expense_filter}")
+            
             deleted_shared = await db.shared_expenses.delete_many(shared_expense_filter)
             if deleted_shared.deleted_count > 0:
-                logging.info(f"Deleted {deleted_shared.deleted_count} related shared expense records for expense {expense_id}")
+                logging.info(f"✅ Deleted {deleted_shared.deleted_count} related shared expense records for expense {expense_id}")
             else:
-                logging.warning(f"No matching shared expense records found for expense {expense_id}")
-        
+                logging.warning(f"⚠️ No matching shared expense records found for expense {expense_id}")
+                
+                # Try alternative matching - search by expense ID in shared_expenses
+                alt_filter = {"expense_id": expense_id}
+                deleted_alt = await db.shared_expenses.delete_many(alt_filter)
+                if deleted_alt.deleted_count > 0:
+                    logging.info(f"✅ Alternative match: Deleted {deleted_alt.deleted_count} shared expense records by expense_id")
+                else:
+                    logging.warning(f"⚠️ No shared expense records found by expense_id either")
+        else:
+            logging.info("This is not a shared expense - skipping shared_expenses cleanup")
         return {"message": "Expense deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

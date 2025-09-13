@@ -551,6 +551,109 @@ async def logout(request: Request, session_token: Optional[str] = Cookie(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Logout error: {str(e)}")
 
+# User Management Routes
+@api_router.get("/users", response_model=List[UserManagement])
+async def get_all_users(admin_user: User = Depends(require_admin_role)):
+    """Get all users in the system (Owner/Co-owner only)"""
+    try:
+        users = await db.users.find({}).to_list(length=None)
+        result = []
+        for user_data in users:
+            user = parse_from_mongo(user_data)
+            result.append(UserManagement(
+                id=user["id"],
+                email=user["email"],
+                name=user["name"],
+                picture=user["picture"],
+                role=UserRole(user.get("role", UserRole.VIEWER)),
+                created_at=user["created_at"]
+            ))
+        
+        # Sort by role hierarchy (Owner -> Co-owner -> Editor -> Viewer) then by name
+        role_order = {UserRole.OWNER: 0, UserRole.CO_OWNER: 1, UserRole.EDITOR: 2, UserRole.VIEWER: 3}
+        result.sort(key=lambda x: (role_order.get(x.role, 4), x.name.lower()))
+        
+        return result
+    except Exception as e:
+        logging.error(f"Error getting users: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/users/assign-role")
+async def assign_user_role(role_data: UserRoleUpdate, admin_user: User = Depends(require_admin_role)):
+    """Assign role to user by email (Owner/Co-owner only)"""
+    try:
+        # Check if user exists
+        user_data = await db.users.find_one({"email": role_data.user_email})
+        if not user_data:
+            # Create user entry if they don't exist (they'll be fully created when they first login)
+            new_user_id = str(uuid.uuid4())
+            await db.users.insert_one({
+                "id": new_user_id,
+                "email": role_data.user_email,
+                "name": role_data.user_email.split("@")[0],  # Temporary name
+                "picture": "",  # Will be updated on first login
+                "role": role_data.new_role.value,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            return {"message": f"User {role_data.user_email} created with role {role_data.new_role.value}"}
+        
+        # Update existing user's role
+        await db.users.update_one(
+            {"email": role_data.user_email},
+            {"$set": {"role": role_data.new_role.value}}
+        )
+        
+        return {"message": f"Role updated for {role_data.user_email} to {role_data.new_role.value}"}
+    except Exception as e:
+        logging.error(f"Error assigning role: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/users/{user_email}")
+async def remove_user(user_email: str, admin_user: User = Depends(require_admin_role)):
+    """Remove user from system (Owner/Co-owner only)"""
+    try:
+        # Prevent removing yourself
+        if user_email == admin_user.email:
+            raise HTTPException(status_code=400, detail="Cannot remove yourself from the system")
+        
+        # Check if user exists
+        user_data = await db.users.find_one({"email": user_email})
+        if not user_data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_id = user_data["id"]
+        
+        # Remove user and their data
+        await db.users.delete_one({"email": user_email})
+        
+        # Remove user's expenses (optional - you might want to reassign them instead)
+        await db.expenses.delete_many({"user_id": user_id})
+        
+        # Remove user's expense shares
+        await db.expense_shares.delete_many({"shared_with_email": user_email})
+        
+        # Remove user's sessions
+        await db.sessions.delete_many({"user_id": user_id})
+        
+        return {"message": f"User {user_email} and their data removed successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error removing user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/users/roles")
+async def get_available_roles(user: User = Depends(require_auth)):
+    """Get available roles for dropdown"""
+    return {
+        "roles": [
+            {"value": UserRole.OWNER, "label": "Owner - Full access to all expenses and user management"},
+            {"value": UserRole.CO_OWNER, "label": "Co-owner - Full access to all expenses and user management"},
+            {"value": UserRole.EDITOR, "label": "Editor - Can edit own expenses"},
+            {"value": UserRole.VIEWER, "label": "Viewer - Can only view expenses"}
+        ]
+    }
+
 # Category Routes
 @api_router.get("/categories", response_model=List[CategoryInfo])
 async def get_categories(user: User = Depends(require_auth)):

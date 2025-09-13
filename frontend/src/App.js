@@ -1967,6 +1967,63 @@ const Settings = ({ user, users, availableRoles, onAssignRole, onRemoveUser, use
   );
 };
 
+// CategoryManagement Component (simplified version for Settings)
+const CategoryManagement = ({ categories, colorPalette, loading, onCreateCategory, onUpdateCategory, onDeleteCategory, onRefresh }) => {
+  if (loading) {
+    return <div className="loading">Loading categories...</div>;
+  }
+
+  const systemCategories = categories.filter(cat => cat.is_system);
+  const customCategories = categories.filter(cat => !cat.is_system);
+
+  return (
+    <div className="category-management">
+      <div className="section-header">
+        <h3>🏷️ Category Management</h3>
+        <button onClick={onRefresh} className="refresh-button" disabled={loading}>
+          🔄 Refresh
+        </button>
+      </div>
+      
+      <div className="categories-overview">
+        <div className="category-stats">
+          <div className="stat-card">
+            <h4>System Categories</h4>
+            <p>{systemCategories.length} categories</p>
+          </div>
+          <div className="stat-card">
+            <h4>Custom Categories</h4>
+            <p>{customCategories.length} categories</p>
+          </div>
+        </div>
+        
+        <div className="category-quick-view">
+          <h4>All Categories Preview</h4>
+          <div className="category-preview-grid">
+            {categories.map((category) => (
+              <div key={category.id} className="category-preview-item">
+                <div 
+                  className="category-preview-icon"
+                  style={{ backgroundColor: category.color }}
+                >
+                  {category.emoji}
+                </div>
+                <span>{category.name}</span>
+                {!category.is_system && <span className="custom-badge">Custom</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="category-management-info">
+          <p>💡 <strong>Tip:</strong> For full category management (create, edit, delete), use the dedicated Categories tab in the main navigation.</p>
+          <p>ℹ️ System categories cannot be edited or deleted, but you can create custom categories with your own colors and emojis.</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // User Management Component (now part of Settings)
 const UserManagement = ({ users, availableRoles, onAssignRole, onRemoveUser, loading, currentUser }) => {
   const [showAssignForm, setShowAssignForm] = useState(false);

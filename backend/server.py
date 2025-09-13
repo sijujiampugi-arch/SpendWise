@@ -326,10 +326,16 @@ async def get_accessible_expenses(user: User, filter_query: dict) -> List[dict]:
         # Process each expense to add proper flags
         for expense in all_expenses:
             # Mark if user owns this expense
-            if expense.get("user_id") == user.id:
+            expense_user_id = expense.get("user_id")
+            current_user_id = user.id
+            logging.info(f"Checking ownership: expense_user_id='{expense_user_id}', current_user_id='{current_user_id}', match={expense_user_id == current_user_id}")
+            
+            if expense_user_id == current_user_id:
                 expense["is_owned_by_me"] = True
+                logging.info(f"Set is_owned_by_me=True for expense {expense.get('id')}")
             else:
                 expense["is_owned_by_me"] = False
+                logging.info(f"Set is_owned_by_me=False for expense {expense.get('id')}")
             
             # Mark if expense is shared with this user
             if expense["id"] in shared_expense_ids:

@@ -1867,7 +1867,7 @@ const ImportManager = ({ categories, onImportComplete }) => {
 
 // Main App with Authentication
 // Settings Component
-const Settings = ({ user, users, availableRoles, onAssignRole, onRemoveUser, userManagementLoading, onLoadUsers }) => {
+const Settings = ({ user, users, availableRoles, onAssignRole, onRemoveUser, userManagementLoading, onLoadUsers, allCategories, colorPalette, categoryLoading, createCategory, updateCategory, deleteCategory, loadCategories }) => {
   const [activeSettingsTab, setActiveSettingsTab] = useState('general');
 
   useEffect(() => {

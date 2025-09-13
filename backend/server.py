@@ -644,7 +644,15 @@ async def get_expense_stats(
         # Calculate statistics
         total_expenses = sum(expense["amount"] for expense in expenses)
         
-        # Category breakdown
+        # Separate individual and shared expenses
+        individual_expenses = [exp for exp in expenses if not exp.get("is_shared", False)]
+        shared_expenses = [exp for exp in expenses if exp.get("is_shared", False)]
+        
+        total_individual_expenses = sum(expense["amount"] for expense in individual_expenses)
+        total_shared_expenses = sum(expense["amount"] for expense in shared_expenses)
+        shared_expense_count = len(shared_expenses)
+        
+        # Category breakdown (all expenses)
         category_breakdown = {}
         for expense in expenses:
             category = expense["category"]

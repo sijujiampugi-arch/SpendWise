@@ -1072,11 +1072,28 @@ const ImportManager = ({ categories, onImportComplete }) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    console.log('File selected:', file.name, file.type, file.size);
+    
+    // Basic file validation
+    const validExtensions = ['.csv', '.xlsx', '.xls'];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    
+    if (!validExtensions.includes(fileExtension)) {
+      alert(`Invalid file type. Please select a CSV or Excel file (.csv, .xlsx, .xls). You selected: ${fileExtension}`);
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      alert('File too large. Please select a file smaller than 10MB.');
+      return;
+    }
+
     setImportFile(file);
     setPreviewData(null);
     setImportResult(null);
 
     try {
+      console.log('Uploading file for preview...');
       const formData = new FormData();
       formData.append('file', file);
 
@@ -1085,11 +1102,27 @@ const ImportManager = ({ categories, onImportComplete }) => {
         withCredentials: true
       });
 
+      console.log('Preview response:', response.data);
       setPreviewData(response.data);
       setColumnMapping(response.data.detected_columns);
+      
+      alert(`File uploaded successfully! Found ${response.data.total_rows} rows of data.`);
     } catch (error) {
       console.error('Error previewing file:', error);
-      alert(error.response?.data?.detail || 'Error previewing file');
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'Error previewing file';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication required. Please log in first.';
+      } else if (error.response?.status === 413) {
+        errorMessage = 'File too large. Please select a smaller file.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Upload failed: ${errorMessage}`);
     }
   };
 

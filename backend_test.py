@@ -1226,7 +1226,7 @@ class BackendTester:
         
         # Summary
         print("\n" + "=" * 80)
-        print("📊 TEST SUMMARY - SHARING FUNCTIONALITY FOCUS")
+        print("📊 TEST SUMMARY - FULL VISIBILITY IMPLEMENTATION")
         print("=" * 80)
         
         total_tests = len(self.test_results)

@@ -1003,12 +1003,14 @@ const ExpensesList = ({ expenses, categories, allCategories, onExpenseDeleted })
   const [expenseShares, setExpenseShares] = useState({});
 
   const getCategoryIcon = (categoryName) => {
-    const category = categories.find(cat => cat.name === categoryName);
-    return category ? category.icon : '📦';
+    // Look in new allCategories array for emoji
+    const category = allCategories.find(cat => cat.name === categoryName);
+    return category ? category.emoji : '📦';
   };
 
   const getCategoryColor = (categoryName) => {
-    const category = categories.find(cat => cat.name === categoryName);
+    // Look in new allCategories array for color
+    const category = allCategories.find(cat => cat.name === categoryName);
     return category ? category.color : '#8E8E93';
   };
 

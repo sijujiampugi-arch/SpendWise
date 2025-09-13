@@ -1239,11 +1239,13 @@ class BackendTester:
         print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
         
         # Categorize results
+        full_visibility_tests = [r for r in self.test_results if "full visibility" in r["test"].lower()]
         sharing_tests = [r for r in self.test_results if any(keyword in r["test"].lower() 
                         for keyword in ["sharing", "share", "ownership", "shared", "settlement"])]
         auth_tests = [r for r in self.test_results if "auth" in r["test"].lower() or "protected" in r["test"].lower()]
         
-        print(f"\n🤝 Sharing Tests: {len(sharing_tests)} ({len([r for r in sharing_tests if r['success']])} passed)")
+        print(f"\n🌍 Full Visibility Tests: {len(full_visibility_tests)} ({len([r for r in full_visibility_tests if r['success']])} passed)")
+        print(f"🤝 Sharing Tests: {len(sharing_tests)} ({len([r for r in sharing_tests if r['success']])} passed)")
         print(f"🔐 Auth Tests: {len(auth_tests)} ({len([r for r in auth_tests if r['success']])} passed)")
         
         if failed_tests > 0:

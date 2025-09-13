@@ -459,7 +459,16 @@ function MainApp() {
                 />
               )}
               {currentView === 'categories' && (
-                <CategoriesManager categories={categories} onCategoryAdded={loadData} />
+                <CategoryManager 
+                  user={user}
+                  categories={allCategories}
+                  colorPalette={colorPalette}
+                  loading={categoryLoading}
+                  onCreateCategory={createCategory}
+                  onUpdateCategory={updateCategory}
+                  onDeleteCategory={deleteCategory}
+                  onRefresh={loadCategories}
+                />
               )}
               {currentView === 'import' && (
                 <ImportManager categories={categories} onImportComplete={loadData} />

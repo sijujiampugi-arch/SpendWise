@@ -1733,6 +1733,165 @@ const ImportManager = ({ categories, onImportComplete }) => {
 };
 
 // Main App with Authentication
+// User Management Component
+const UserManagement = ({ users, availableRoles, onAssignRole, onRemoveUser, loading, currentUser }) => {
+  const [showAssignForm, setShowAssignForm] = useState(false);
+  const [assignFormData, setAssignFormData] = useState({
+    email: '',
+    role: 'viewer'
+  });
+
+  const handleAssignRole = async (e) => {
+    e.preventDefault();
+    if (!assignFormData.email.trim()) {
+      alert('Please enter an email address');
+      return;
+    }
+    
+    await onAssignRole(assignFormData.email, assignFormData.role);
+    setAssignFormData({ email: '', role: 'viewer' });
+    setShowAssignForm(false);
+  };
+
+  const getRoleLabel = (role) => {
+    const roleObj = availableRoles.find(r => r.value === role);
+    return roleObj ? roleObj.label : role;
+  };
+
+  const getRoleBadgeClass = (role) => {
+    switch(role) {
+      case 'owner': return 'role-owner';
+      case 'co_owner': return 'role-co-owner';
+      case 'editor': return 'role-editor';
+      case 'viewer': return 'role-viewer';
+      default: return 'role-viewer';
+    }
+  };
+
+  return (
+    <div className="user-management">
+      <div className="section-header">
+        <h2>👤 User Management</h2>
+        <p>Manage user roles and permissions</p>
+      </div>
+
+      {loading ? (
+        <div className="loading">Loading users...</div>
+      ) : (
+        <>
+          <div className="user-actions">
+            <button 
+              className="add-user-button"
+              onClick={() => setShowAssignForm(!showAssignForm)}
+            >
+              ➕ Assign Role to User
+            </button>
+          </div>
+
+          {showAssignForm && (
+            <div className="assign-role-form">
+              <h3>Assign Role to User</h3>
+              <form onSubmit={handleAssignRole}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Email Address</label>
+                    <input
+                      type="email"
+                      value={assignFormData.email}
+                      onChange={(e) => setAssignFormData({ ...assignFormData, email: e.target.value })}
+                      placeholder="user@example.com"
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Role</label>
+                    <select
+                      value={assignFormData.role}
+                      onChange={(e) => setAssignFormData({ ...assignFormData, role: e.target.value })}
+                      className="form-select"
+                    >
+                      {availableRoles.map(role => (
+                        <option key={role.value} value={role.value}>
+                          {role.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="submit-button">
+                    ✅ Assign Role
+                  </button>
+                  <button 
+                    type="button" 
+                    className="cancel-button"
+                    onClick={() => setShowAssignForm(false)}
+                  >
+                    ❌ Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          <div className="users-list">
+            <h3>System Users ({users.length})</h3>
+            {users.length === 0 ? (
+              <div className="no-users">
+                <p>No users found.</p>
+              </div>
+            ) : (
+              <div className="users-grid">
+                {users.map(user => (
+                  <div key={user.email} className="user-card">
+                    <div className="user-info">
+                      <img src={user.picture} alt={user.name} className="user-avatar-large" />
+                      <div className="user-details">
+                        <h4>{user.name}</h4>
+                        <p className="user-email">{user.email}</p>
+                        <span className={`role-badge ${getRoleBadgeClass(user.role)}`}>
+                          {getRoleLabel(user.role).split(' - ')[0]}
+                        </span>
+                        <p className="user-created">
+                          Joined: {new Date(user.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="user-actions">
+                      <select
+                        value={user.role}
+                        onChange={(e) => onAssignRole(user.email, e.target.value)}
+                        className="role-select"
+                        disabled={user.email === currentUser?.email}
+                      >
+                        {availableRoles.map(role => (
+                          <option key={role.value} value={role.value}>
+                            {role.label.split(' - ')[0]}
+                          </option>
+                        ))}
+                      </select>
+                      {user.email !== currentUser?.email && (
+                        <button 
+                          className="remove-user-button"
+                          onClick={() => onRemoveUser(user.email)}
+                          title="Remove user"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>

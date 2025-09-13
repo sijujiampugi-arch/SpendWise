@@ -294,6 +294,7 @@ metadata:
 
 test_plan:
   current_focus:
+    - "Critical dashboard stats bug fix - full visibility implementation - VERIFIED AND RESOLVED"
     - "Critical shared expense deletion bug fix - backend data cleanup - VERIFIED AND RESOLVED"
     - "Shared expenses synchronization bug fix - VERIFIED AND RESOLVED"
   stuck_tasks: []

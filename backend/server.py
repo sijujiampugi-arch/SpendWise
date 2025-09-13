@@ -950,19 +950,21 @@ async def get_expense_stats(
         if not month:
             month = current_date.month
         
-        # Build date filter for user's expenses
+        # Build date filter for ALL expenses (full visibility)
         start_date = f"{year}-{month:02d}-01"
         if month == 12:
             end_date = f"{year + 1}-01-01"
         else:
             end_date = f"{year}-{month + 1:02d}-01"
         
+        # FULL VISIBILITY: Show stats for ALL expenses, not just user-specific ones
         filter_query = {
-            "user_id": user.id,
             "date": {"$gte": start_date, "$lt": end_date}
         }
         
+        logging.info(f"Getting dashboard stats for user {user.email} (role: {user.role}) - showing ALL expenses for {month}/{year}")
         expenses = await db.expenses.find(filter_query).to_list(length=None)
+        logging.info(f"Found {len(expenses)} total expenses for dashboard stats")
         
         # Calculate statistics
         total_expenses = sum(expense["amount"] for expense in expenses)

@@ -303,14 +303,12 @@ function MainApp() {
           >
             📄 Import
           </button>
-          {(user?.role === 'owner' || user?.role === 'co_owner') && (
-            <button 
-              className={`nav-button ${currentView === 'users' ? 'active' : ''}`}
-              onClick={() => setCurrentView('users')}
-            >
-              👤 Users
-            </button>
-          )}
+          <button 
+            className={`nav-button ${currentView === 'settings' ? 'active' : ''}`}
+            onClick={() => setCurrentView('settings')}
+          >
+            ⚙️ Settings
+          </button>
         </nav>
 
         {/* Month/Year Selector */}

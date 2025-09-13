@@ -2,6 +2,7 @@ import React, { useState, useEffect, createContext, useContext, useCallback } fr
 import './App.css';
 import axios from 'axios';
 import * as d3 from 'd3';
+import CategoryManager from './CategoryManager';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

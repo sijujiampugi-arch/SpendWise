@@ -294,10 +294,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Owner role assignment for specific email 'sijujiampugi@gmail.com'"
+    - "Critical Owner delete bug - RESOLVED"
   stuck_tasks: []
   test_all: false
-  test_priority: "owner_role_assignment_complete"
+  test_priority: "critical_bug_fixed"
 
   - task: "Spreadsheet import functionality (CSV/Excel)"
     implemented: true

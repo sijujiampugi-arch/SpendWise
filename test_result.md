@@ -294,10 +294,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Full visibility implementation - all users see ALL expenses"
+    - "Role-based access control system implementation"
   stuck_tasks: []
   test_all: false
-  test_priority: "full_visibility_verification"
+  test_priority: "rbac_verification_complete"
 
   - task: "Spreadsheet import functionality (CSV/Excel)"
     implemented: true

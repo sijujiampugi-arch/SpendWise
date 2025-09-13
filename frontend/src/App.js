@@ -143,6 +143,11 @@ function MainApp() {
   const [users, setUsers] = useState([]);
   const [availableRoles, setAvailableRoles] = useState([]);
   const [userManagementLoading, setUserManagementLoading] = useState(false);
+  
+  // Category management state
+  const [allCategories, setAllCategories] = useState([]);
+  const [colorPalette, setColorPalette] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
 
   // Load data on component mount and when filters change
   useEffect(() => {

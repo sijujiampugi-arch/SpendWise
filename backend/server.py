@@ -1006,19 +1006,20 @@ async def get_expense_stats(
 
 @api_router.put("/expenses/{expense_id}", response_model=Expense)
 async def update_expense(expense_id: str, expense_data: ExpenseUpdate, user: User = Depends(require_auth)):
-    """Update an existing expense (if user has edit access)"""
+    """Update an existing expense (role-based access control)"""
     try:
-        logging.info(f"Updating expense {expense_id} for user {user.email}: {expense_data.dict()}")
+        logging.info(f"Updating expense {expense_id} for user {user.email} (role: {user.role}): {expense_data.dict()}")
         
-        # Check if user has edit access to this expense
-        has_access = await check_expense_access(expense_id, user, "edit")
-        if not has_access:
-            raise HTTPException(status_code=403, detail="You don't have edit access to this expense")
-        
-        # Get the expense
+        # Get the expense first to check ownership
         existing_expense = await db.expenses.find_one({"id": expense_id})
         if not existing_expense:
             raise HTTPException(status_code=404, detail="Expense not found")
+        
+        # Check role-based edit permissions
+        if not can_edit_expense(user, existing_expense["user_id"]):
+            raise HTTPException(status_code=403, detail="You don't have permission to edit this expense")
+        
+        logging.info(f"Edit permission granted for user {user.email} (role: {user.role}) on expense owned by {existing_expense['user_id']}")
         
         # Parse existing expense
         existing_expense = parse_from_mongo(existing_expense)

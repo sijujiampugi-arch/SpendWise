@@ -11,7 +11,7 @@ import uuid
 import time
 
 # Configuration
-BASE_URL = "https://spendwise-317.preview.emergentagent.com/api"
+BASE_URL = "https://budget-sentinel-1.preview.emergentagent.com/api"
 HEADERS = {"Content-Type": "application/json"}
 
 # Test data

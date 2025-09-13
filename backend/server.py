@@ -675,7 +675,7 @@ async def create_expense(expense_data: ExpenseCreate, user: User = Depends(requi
         logging.error(f"Unexpected error creating expense: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@api_router.get("/expenses", response_model=List[Expense])
+@api_router.get("/expenses")
 async def get_expenses(
     user: User = Depends(require_auth),
     month: Optional[int] = Query(None, description="Filter by month (1-12)"),

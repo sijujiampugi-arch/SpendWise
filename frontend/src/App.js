@@ -1735,7 +1735,84 @@ const ImportManager = ({ categories, onImportComplete }) => {
 };
 
 // Main App with Authentication
-// User Management Component
+// Settings Component
+const Settings = ({ user, users, availableRoles, onAssignRole, onRemoveUser, userManagementLoading, onLoadUsers }) => {
+  const [activeSettingsTab, setActiveSettingsTab] = useState('general');
+
+  useEffect(() => {
+    // Load users when user management tab is accessed
+    if (activeSettingsTab === 'users' && (user?.role === 'owner' || user?.role === 'co_owner')) {
+      onLoadUsers();
+    }
+  }, [activeSettingsTab, user?.role, onLoadUsers]);
+
+  return (
+    <div className="settings">
+      <div className="section-header">
+        <h2>⚙️ Settings</h2>
+        <p>Manage your application preferences and system settings</p>
+      </div>
+
+      {/* Settings Navigation */}
+      <div className="settings-nav">
+        <button 
+          className={`settings-nav-button ${activeSettingsTab === 'general' ? 'active' : ''}`}
+          onClick={() => setActiveSettingsTab('general')}
+        >
+          🏠 General
+        </button>
+        <button 
+          className={`settings-nav-button ${activeSettingsTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveSettingsTab('profile')}
+        >
+          👤 Profile
+        </button>
+        {(user?.role === 'owner' || user?.role === 'co_owner') && (
+          <button 
+            className={`settings-nav-button ${activeSettingsTab === 'users' ? 'active' : ''}`}
+            onClick={() => setActiveSettingsTab('users')}
+          >
+            👥 User Management
+          </button>
+        )}
+        <button 
+          className={`settings-nav-button ${activeSettingsTab === 'about' ? 'active' : ''}`}
+          onClick={() => setActiveSettingsTab('about')}
+        >
+          ℹ️ About
+        </button>
+      </div>
+
+      {/* Settings Content */}
+      <div className="settings-content">
+        {activeSettingsTab === 'general' && (
+          <GeneralSettings />
+        )}
+        
+        {activeSettingsTab === 'profile' && (
+          <ProfileSettings user={user} />
+        )}
+        
+        {activeSettingsTab === 'users' && (user?.role === 'owner' || user?.role === 'co_owner') && (
+          <UserManagement 
+            users={users} 
+            availableRoles={availableRoles}
+            onAssignRole={onAssignRole}
+            onRemoveUser={onRemoveUser}
+            loading={userManagementLoading}
+            currentUser={user}
+          />
+        )}
+        
+        {activeSettingsTab === 'about' && (
+          <AboutSettings />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// User Management Component (now part of Settings)
 const UserManagement = ({ users, availableRoles, onAssignRole, onRemoveUser, loading, currentUser }) => {
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [assignFormData, setAssignFormData] = useState({

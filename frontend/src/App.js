@@ -990,6 +990,9 @@ const ExpensesList = ({ expenses, categories, onExpenseDeleted }) => {
       const response = await axios.get(`${API}/expenses/${expenseId}/shares`, { withCredentials: true });
       setExpenseShares({ ...expenseShares, [expenseId]: response.data.shares });
       
+      // Refresh all data to sync Shared expenses tab
+      onExpenseDeleted();
+      
       alert('Share removed successfully!');
     } catch (error) {
       console.error('Error removing share:', error);

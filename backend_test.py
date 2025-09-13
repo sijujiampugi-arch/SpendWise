@@ -1199,6 +1199,9 @@ class BackendTester:
         self.test_auth_logout_functionality()
         self.test_protected_endpoints_without_auth()
         
+        # Run FULL VISIBILITY focused tests
+        self.test_full_visibility_implementation()
+        
         # Run sharing-focused tests
         print("\n🤝 SHARING FUNCTIONALITY TESTS")
         print("-" * 40)

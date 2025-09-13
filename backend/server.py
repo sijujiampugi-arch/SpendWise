@@ -676,10 +676,10 @@ async def get_expenses(
     category: Optional[str] = Query(None, description="Filter by category"),
     limit: int = Query(100, description="Maximum number of expenses to return")
 ):
-    """Get expenses with optional filtering"""
+    """Get expenses with optional filtering (includes shared expenses)"""
     try:
-        # Build filter query for user's expenses
-        filter_query = {"user_id": user.id}
+        # Build filter query
+        filter_query = {}
         
         if month or year:
             date_filter = {}
@@ -699,9 +699,32 @@ async def get_expenses(
         if category:
             filter_query["category"] = category
         
-        expenses = await db.expenses.find(filter_query).sort("date", -1).limit(limit).to_list(length=None)
-        return [Expense(**parse_from_mongo(expense)) for expense in expenses]
+        # Get accessible expenses (own + shared)
+        expenses = await get_accessible_expenses(user, filter_query)
+        
+        # Apply limit
+        expenses = expenses[:limit]
+        
+        # Convert to Expense models
+        result = []
+        for expense in expenses:
+            expense_data = parse_from_mongo(expense)
+            expense_obj = Expense(**expense_data)
+            
+            # Add additional fields for sharing info
+            if hasattr(expense_obj, '__dict__'):
+                if expense.get("shared_permission"):
+                    expense_obj.__dict__["shared_permission"] = expense["shared_permission"]
+                if expense.get("is_shared_with_me"):
+                    expense_obj.__dict__["is_shared_with_me"] = True
+                if expense.get("is_owned_by_me"):
+                    expense_obj.__dict__["is_owned_by_me"] = True
+            
+            result.append(expense_obj)
+        
+        return result
     except Exception as e:
+        logging.error(f"Error getting expenses: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @api_router.get("/expenses/stats", response_model=ExpenseStats)

@@ -130,6 +130,17 @@ class ExpenseCreate(BaseModel):
             date: lambda v: v.isoformat()
         }
 
+class ExpenseUpdate(BaseModel):
+    amount: float = Field(..., gt=0, description="Amount must be greater than 0")
+    category: str = Field(..., min_length=1, description="Category cannot be empty")
+    description: str = Field(..., min_length=1, description="Description cannot be empty")
+    date: date
+
+    class Config:
+        json_encoders = {
+            date: lambda v: v.isoformat()
+        }
+
 class ExpenseStats(BaseModel):
     total_expenses: float
     total_individual_expenses: float

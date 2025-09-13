@@ -261,10 +261,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Spreadsheet import functionality (CSV/Excel)"
+    - "Spreadsheet import functionality (CSV/Excel) - PYDANTIC FIX VERIFIED"
   stuck_tasks: []
   test_all: false
-  test_priority: "import_functionality_analysis_complete"
+  test_priority: "pydantic_validation_fix_confirmed"
 
   - task: "Spreadsheet import functionality (CSV/Excel)"
     implemented: true

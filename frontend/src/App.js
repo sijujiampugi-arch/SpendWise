@@ -454,6 +454,18 @@ function MainApp() {
               {currentView === 'import' && (
                 <ImportManager categories={categories} onImportComplete={loadData} />
               )}
+              {currentView === 'categories' && (
+                <CategoryManager 
+                  user={user}
+                  categories={allCategories}
+                  colorPalette={colorPalette}
+                  loading={categoryLoading}
+                  onCreateCategory={createCategory}
+                  onUpdateCategory={updateCategory}
+                  onDeleteCategory={deleteCategory}
+                  onRefresh={loadCategories}
+                />
+              )}
               {currentView === 'settings' && (
                 <Settings 
                   user={user}

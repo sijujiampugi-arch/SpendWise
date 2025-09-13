@@ -264,11 +264,23 @@ function MainApp() {
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
             className="period-select"
           >
-            {Array.from({length: 5}, (_, i) => (
-              <option key={2020 + i} value={2020 + i}>
-                {2020 + i}
-              </option>
-            ))}
+            {(() => {
+              const currentYear = new Date().getFullYear();
+              const startYear = currentYear - 2; // Show 2 years back
+              const endYear = currentYear + 1;   // Show 1 year ahead
+              const years = [];
+              
+              for (let year = startYear; year <= endYear; year++) {
+                years.push(
+                  <option key={year} value={year}>
+                    {year}
+                    {year === currentYear && ' (Current)'}
+                    {year === currentYear + 1 && ' (Future)'}
+                  </option>
+                );
+              }
+              return years;
+            })()}
           </select>
         </div>
 

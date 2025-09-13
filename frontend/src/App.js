@@ -475,6 +475,13 @@ function MainApp() {
                   onRemoveUser={removeUser}
                   userManagementLoading={userManagementLoading}
                   onLoadUsers={loadUsers}
+                  allCategories={allCategories}
+                  colorPalette={colorPalette}
+                  categoryLoading={categoryLoading}
+                  createCategory={createCategory}
+                  updateCategory={updateCategory}
+                  deleteCategory={deleteCategory}
+                  loadCategories={loadCategories}
                 />
               )}
             </>

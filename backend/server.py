@@ -467,7 +467,7 @@ async def root():
     return {"message": "SpendWise API - Enhanced Expense Tracking with Shared Expenses"}
 
 @api_router.post("/expenses", response_model=Expense)
-async def create_expense(expense_data: ExpenseUpdate, user: User = Depends(require_auth)):
+async def create_expense(expense_data: ExpenseCreate, user: User = Depends(require_auth)):
     """Create a new expense (shared or individual)"""
     try:
         logging.info(f"Creating expense for user {user.email}: {expense_data.dict()}")

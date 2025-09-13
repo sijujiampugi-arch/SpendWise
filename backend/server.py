@@ -708,7 +708,7 @@ async def get_categories(user: User = Depends(require_auth)):
             result.append(CategoryInfo(
                 name=cat["name"],
                 color=cat["color"],
-                icon=cat["icon"]
+                emoji=cat["emoji"]
             ))
         
         return result

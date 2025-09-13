@@ -294,10 +294,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Critical Owner delete bug - VERIFIED AND RESOLVED"
+    - "Shared expenses synchronization bug fix"
   stuck_tasks: []
   test_all: false
-  test_priority: "critical_bug_verified"
+  test_priority: "high_first"
 
   - task: "Spreadsheet import functionality (CSV/Excel)"
     implemented: true

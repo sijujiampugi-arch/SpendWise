@@ -138,6 +138,11 @@ function MainApp() {
   const [loading, setLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  
+  // User management state
+  const [users, setUsers] = useState([]);
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [userManagementLoading, setUserManagementLoading] = useState(false);
 
   // Load data on component mount and when filters change
   useEffect(() => {

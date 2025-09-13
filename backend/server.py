@@ -918,6 +918,11 @@ async def get_expenses(
             # Always include is_owned_by_me (True or False) for frontend canEdit/canDelete logic
             expense_dict["is_owned_by_me"] = expense.get("is_owned_by_me", False)
             
+            # CRITICAL FIX: Include role-based permission flags for frontend
+            expense_dict["can_edit"] = expense.get("can_edit", False)
+            expense_dict["can_delete"] = expense.get("can_delete", False)
+            expense_dict["can_share"] = expense.get("can_share", False)
+            
             if expense.get("shared_permission"):
                 expense_dict["shared_permission"] = expense["shared_permission"]
             if expense.get("is_shared_with_me"):

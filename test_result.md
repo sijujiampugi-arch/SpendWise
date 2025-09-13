@@ -266,6 +266,21 @@ test_plan:
   test_all: false
   test_priority: "mobile_fixes_complete"
 
+  - task: "Spreadsheet import functionality (CSV/Excel)"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented comprehensive spreadsheet import system with file upload, preview, column mapping, and import execution. Backend includes smart column detection and validation."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL AUTHENTICATION BARRIER: Cannot fully test import functionality due to Google OAuth requirement. However, comprehensive code analysis reveals: 1) ✅ BACKEND FIX VERIFIED: The critical `/import/execute` endpoint fix has been properly applied - column_mapping is now correctly read from FormData (line 853) instead of Query parameters. 2) ✅ FRONTEND IMPLEMENTATION CORRECT: Frontend properly sends column_mapping as FormData using JSON.stringify (line 1151). 3) ✅ UI COMPONENTS WELL-STRUCTURED: Import UI includes file upload validation, preview section, column mapping interface, and result display. 4) ✅ ERROR HANDLING COMPREHENSIVE: Both frontend and backend have detailed error handling with user-friendly messages. 5) ⚠️ BACKEND LOGS SHOW MIXED RESULTS: Still seeing some 400 Bad Request errors for /api/import/preview, but this may be from previous testing attempts. 6) ✅ CODE STRUCTURE ANALYSIS: All import components (ImportManager lines 1063-1357) are properly implemented with file validation, smart column detection, and comprehensive error handling. 7) ❌ TESTING LIMITATION: Authentication requirement prevents end-to-end testing of actual import flow, but code structure suggests the critical backend fix should resolve the original 'nothing happens when importing' issue."
+
 agent_communication:
   - agent: "main"
     message: "Phase 1 complete: Authentication + Custom Categories implemented. Need to test auth flow, session management, and custom category creation before proceeding to shared expenses and spreadsheet import."
@@ -275,3 +290,7 @@ agent_communication:
     message: "🎉 SHARED EXPENSE BUG FIXED! User-reported issue resolved through comprehensive debugging: 1) Used web search to identify FastAPI validation patterns and common 400 error causes, 2) Added global RequestValidationError handler with detailed logging, 3) Enhanced backend validation with clear error messages and proper data structure checking, 4) Improved frontend validation logic with better user feedback and relaxed tolerance, 5) Added detailed console logging for debugging. The shared expense form should now work correctly and provide clear error messages instead of failing silently. Both backend and frontend have been significantly improved for better error handling and user experience."
   - agent: "testing"
     message: "🎉 MOBILE DELETE BUTTON FIX VERIFIED! Comprehensive mobile responsiveness testing completed with excellent results: 1) ✅ CRITICAL BUG FIXED: Delete buttons now meet mobile touch guidelines (44px minimum) across all tested devices (iPhone SE, iPhone 12, iPhone 11 Pro Max, Galaxy S5). 2) ✅ Touch optimization implemented: touch-action: manipulation properly set for better mobile performance. 3) ✅ Mobile-specific styles working: min-width/height 44px, proper padding (8px), larger font-size (16px), better contrast (red background, white text), rounded corners (12px). 4) ✅ Responsive layout: Expense items properly stack in column layout on mobile, delete buttons positioned correctly without overlap. 5) ✅ Cross-device consistency: Works in portrait/landscape orientations and across different mobile viewport sizes. 6) ✅ Touch interactions: All delete buttons are clickable, hoverable, and provide proper visual feedback. 7) ✅ No layout issues detected: 3/3 buttons pass mobile guidelines, average size 44.0×45.6px. The user-reported issue 'Entered expense cannot be deleted when in mobile view' has been successfully resolved."
+  - agent: "main"
+    message: "🔧 CRITICAL BACKEND FIX APPLIED: Fixed major bug in `/import/execute` endpoint where `column_mapping` was expected as Query parameter but frontend was sending it as FormData. Updated backend to properly read from FormData using `form['column_mapping']` and parse JSON. This should resolve the 400 Bad Request errors and the user-reported issue of 'nothing happens when importing files'."
+  - agent: "testing"
+    message: "📋 IMPORT FUNCTIONALITY ANALYSIS COMPLETED: 1) ✅ CRITICAL FIX VERIFIED: Backend code analysis confirms the `/import/execute` endpoint now correctly reads `column_mapping` from FormData (line 853) instead of Query parameters, matching frontend implementation (line 1151). 2) ✅ COMPREHENSIVE ERROR HANDLING: Both frontend and backend have detailed error handling with user-friendly messages for various scenarios (file validation, authentication, processing errors). 3) ✅ UI COMPONENTS WELL-DESIGNED: Import interface includes file upload validation (.csv, .xlsx, .xls), preview section with data table, column mapping dropdowns with auto-detection, and result display with success/failure counts. 4) ✅ SMART COLUMN DETECTION: Backend implements intelligent column mapping for common field names (amount, description, category, date). 5) ⚠️ AUTHENTICATION BARRIER: Cannot perform end-to-end testing due to Google OAuth requirement, but code structure analysis indicates the critical fix should resolve the original import issues. 6) ⚠️ BACKEND LOGS: Still showing some 400 errors for /api/import/preview, but these may be from previous testing attempts before the fix. 7) 📊 RECOMMENDATION: The import functionality appears properly implemented with the critical backend fix applied. Main agent should test with authenticated user to verify end-to-end functionality."

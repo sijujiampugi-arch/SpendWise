@@ -1936,6 +1936,18 @@ const Settings = ({ user, users, availableRoles, onAssignRole, onRemoveUser, use
           />
         )}
         
+        {activeSettingsTab === 'categories' && (user?.role === 'owner' || user?.role === 'co_owner') && (
+          <CategoryManagement 
+            categories={allCategories}
+            colorPalette={colorPalette}
+            loading={categoryLoading}
+            onCreateCategory={createCategory}
+            onUpdateCategory={updateCategory}
+            onDeleteCategory={deleteCategory}
+            onRefresh={loadCategories}
+          />
+        )}
+        
         {activeSettingsTab === 'about' && (
           <AboutSettings />
         )}

@@ -175,7 +175,7 @@ class ImportPreview(BaseModel):
     total_rows: int
     preview_data: List[Dict[str, Any]]
     detected_columns: Dict[str, str]
-    import_stats: Dict[str, int]
+    import_stats: Dict[str, Any]  # Changed from Dict[str, int] to allow mixed types
 
 class ImportResult(BaseModel):
     total_imported: int
